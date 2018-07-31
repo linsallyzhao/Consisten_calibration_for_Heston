@@ -18,11 +18,11 @@ const double pi = 4.0*atan(1.0), lb = 0.0, ub = 200, mid = 0.5*(ub + lb), halfRa
 
 struct GLsetting{
     int nGrid;
-    VD abs;//Can I only pass the beginning address instead of the whole thing?
-    VD weights;
+    VD* abs;
+    VD* weights;
 };
 
-static GLsetting gl = {64, x64, w64};
+static GLsetting gl = {64, &x64, &w64};
 
 struct mktPara{
     double S;
@@ -45,26 +45,27 @@ VD SPXprice(modelPara p, VD tau, double S, VD K, double r, int n);
 
 int main(){
     modelPara mp = { 3.0, 0.1, 0.08, -0.8, 0.25};
-    VD karr ={
+    double S = 1.0;
+    double r = 0.02;
+    const VD karr = {
     0.9371, 0.8603, 0.8112, 0.7760, 0.7470, 0.7216, 0.6699, 0.6137,
     0.9956, 0.9868, 0.9728, 0.9588, 0.9464, 0.9358, 0.9175, 0.9025,
     1.0427, 1.0463, 1.0499, 1.0530, 1.0562, 1.0593, 1.0663, 1.0766,
     1.2287, 1.2399, 1.2485, 1.2659, 1.2646, 1.2715, 1.2859, 1.3046,
     1.3939, 1.4102, 1.4291, 1.4456, 1.4603, 1.4736, 1.5005, 1.5328};
 
-    VD tarr = {
+    const VD tarr = {
     0.119047619047619, 0.238095238095238,  0.357142857142857, 0.476190476190476,   0.595238095238095, 0.714285714285714, 1.07142857142857, 1.42857142857143,
     0.119047619047619,  0.238095238095238, 0.357142857142857, 0.476190476190476, 0.595238095238095, 0.714285714285714  ,1.07142857142857, 1.42857142857143 ,
     0.119047619047619,  0.238095238095238,  0.357142857142857,  0.476190476190476,  0.595238095238095,  0.714285714285714,  1.07142857142857,   1.42857142857143,
     0.119047619047619,  0.238095238095238,  0.357142857142857,  0.476190476190476   ,0.595238095238095, 0.714285714285714,  1.07142857142857,   1.42857142857143,
     0.119047619047619,  0.238095238095238,  0.357142857142857, 0.476190476190476,  0.595238095238095,  0.714285714285714,  1.07142857142857,   1.42857142857143};
-                                                                                            
 
-    double S = 1.0;
-    double r = 0.02;
-    VD SPXprices = SPXprice(mp, tarr, S, karr, r, 40);
+    mktPara mP = {S, r, tarr, karr};
 
-    for (int j=0; j<40; j++){
+    VD SPXprices = SPXprice(mp, tarr, S, karr, r, karr.size());
+
+    for (int j=0; j<karr.size(); j++){
         std::cout << "strike price =  " << karr[j] << std::endl;
         std::cout << "maturity =      " << tarr[j] << std::endl;
         std::cout << "SPXcall price = " << SPXprices[j] << std::endl << std::endl;
@@ -119,11 +120,11 @@ VD SPXprice(modelPara p, VD tau, double S, VD K, double r, int n){
 
     double up_u, down_u, upInt, downInt, strike, T, discountF, rT, glCollect, glInt, SPXcall;
     nGrid = nGrid>>1;
-    VD u = gl.abs;
-    VD w = gl.weights;
+    VD u = *gl.abs;
+    VD w = *gl.weights;
 
     VD SPXs;
-    SPXs.reserve(40);
+    SPXs.reserve(n);
 
     for (int j = 0; j < n; j++){
         strike = K[j];
