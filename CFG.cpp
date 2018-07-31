@@ -105,9 +105,9 @@ int main() {
     VD SPXprices = SPXprice(mp, tarr, S, karr, r, (int)karr.size());
 
     for (int j = 0; j < (int)karr.size(); j++) {
-        std::cout << "strike price =  " << karr[j] << std::endl;
-        std::cout << "maturity =      " << tarr[j] << std::endl;
-        std::cout << "SPXcall price = " << SPXprices[j] << std::endl
+        std::cout << "strike_price  " << karr[j] << std::endl;
+        std::cout << "maturity      " << tarr[j] << std::endl;
+        std::cout << "SPXcall_price " << SPXprices[j] << std::endl
                   << std::endl;
     }
 }

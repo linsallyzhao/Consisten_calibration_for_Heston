@@ -1,0 +1,3 @@
+#!/bin/bash -e
+
+join <(./HC) <(./CFG) | awk '$3 { print $0 " " $2 - $3 } !$3 { print }'
