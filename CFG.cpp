@@ -102,9 +102,9 @@ int main() {
 
     mktPara mP = {S, r, tarr, karr};
 
-    VD SPXprices = SPXprice(mp, tarr, S, karr, r, karr.size());
+    VD SPXprices = SPXprice(mp, tarr, S, karr, r, (int)karr.size());
 
-    for (int j = 0; j < karr.size(); j++) {
+    for (int j = 0; j < (int)karr.size(); j++) {
         std::cout << "strike price =  " << karr[j] << std::endl;
         std::cout << "maturity =      " << tarr[j] << std::endl;
         std::cout << "SPXcall price = " << SPXprices[j] << std::endl
@@ -155,7 +155,7 @@ double SPXintegrand(double u, modelPara p, double tau, double K, double S,
 VD SPXprice(modelPara p, VD tau, double S, VD K, double r, int n) {
     int nGrid = gl.nGrid;
 
-    double up_u, down_u, upInt, downInt, strike, T, discountF, rT, glCollect,
+    double up_u, down_u, upInt, downInt, strike, T, rT, glCollect,
         glInt, SPXcall;
     nGrid = nGrid >> 1;
     VD u = *gl.abs;
@@ -167,7 +167,6 @@ VD SPXprice(modelPara p, VD tau, double S, VD K, double r, int n) {
     for (int j = 0; j < n; j++) {
         strike = K[j];
         T = tau[j];
-        discountF = exp(-r * T);
         rT = r * T;
         glCollect = 0.0;
 
