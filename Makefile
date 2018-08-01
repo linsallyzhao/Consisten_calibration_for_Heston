@@ -1,6 +1,6 @@
 CC = g++
 CFLAGS = -Wall -Werror -Wextra -O2 -fno-omit-frame-pointer -g3
-LIBS = -lm -llevmar
+LIBS = -lm -llevmar -lfaddeeva
 
 all: HC CFG
 

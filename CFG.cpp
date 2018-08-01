@@ -6,6 +6,7 @@
 #include <iomanip>
 #include <iostream>
 #include <vector>
+#include <Faddeeva.hh>
 
 typedef std::vector<double> VD;
 static VD x64 = {0.0243502926634244325089558, 0.0729931217877990394495429,
@@ -290,6 +291,11 @@ VD SPXprice(modelPara p, VD tau, double S, VD K, double r, int n) { //tau and K 
     return SPXs; //Here can return an adress of the VD.
 }
 
+//For this pricing, the u is not a real but can be a complex. See smile page
+//7, equation (11). Currently, u is real which means im(u) is 0, but in the
+//paper it said it should be > 0. Do I choose one im(u) and how to choose?
+//So does this numerical integration still work? And what should the upper
+//boundary be? 
 VD VIXprice(modelPara p, VD &tau, double tbar, VD &K, double r, int n){
     int nGrid = gl.nGrid;
 
