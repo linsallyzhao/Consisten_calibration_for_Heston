@@ -121,8 +121,8 @@ int main() {
 
     mktPara marP = {S, r, tarr, karr};
 
-    showSPXcallPrices(mp, tarr, S, karr, r, (int)karr.size());
-    printCFvol(mp, tarr[1], gl.nGrid>>1);
+    //showSPXcallPrices(mp, tarr, S, karr, r, (int)karr.size());
+    //printCFvol(mp, tarr[1], gl.nGrid>>1);
     printIntegrandVIXoption(mp, tarr[5], karr[5], tbar, gl.nGrid>>1);
     printVIXcalls(mp, tarr, tbar, karr, r, (int)karr.size());
 }
@@ -248,7 +248,7 @@ double VIXintegrand(double u, modelPara p, double tau, double K, double tbar){
     double btauBar = vbar*(tbar - atauBar);
     CD CFvola = CFvol(interU, p, tau);
     CD part1 = exp(-iu*btauBar/tbar);
-    CD part2 = 1.0 - iu*K/100.0; //Need complex error function here.
+    CD part2 = 1.0 - Faddeeva::erf(K/100.0 * sqrt(-iu)); //Need complex error function here.
     CD part3 = pow(-iu, 3/2.0);
 
     double VIXint = real(CFvola*part1*part2/part3);
