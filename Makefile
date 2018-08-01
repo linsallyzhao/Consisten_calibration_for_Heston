@@ -1,5 +1,5 @@
 CC = g++
-CFLAGS = -Wall -Werror -Wextra -O2 -fno-omit-frame-pointer -g3
+CFLAGS = -Wall -Werror -Wextra -O2 -fno-omit-frame-pointer -g3 -flto
 LIBS = -lm -llevmar -lfaddeeva
 
 all: HC CFG
