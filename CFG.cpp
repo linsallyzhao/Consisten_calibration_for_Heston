@@ -76,13 +76,6 @@ struct CFPriceData {
     CD D;
 };
 
-struct CFpriceGrad {
-    CD v0Par;
-    CD vbarPar;
-    CD rhoPar;
-    CD kPar;
-    CD sigmaPar;
-};
 
 struct mktPara {
     double S;
@@ -106,13 +99,15 @@ VD SPXprice(modelPara p, VD tau, double S, VD K, double r, int n);
 CD CFvol(CD u, modelPara p, double tau);
 double VIXintegrand(CD u, modelPara p, double tau, double K, double tbar);
 VD VIXprice(modelPara p, VD &tau, double tbar, VD &K, double r, int n);
-CFpriceGrad gradCFprice(CD u, modelPara p, double tau, double S, double r);
+VD gradSPXintgrand(double u, modelPara p, double tau, double K, double S, double r);
+VD gradientSPXprice(modelPara p, double S, double r, int n, VD &tau, VD &K);
 
 //For comparing
 void showSPXcallPrices(modelPara mp, VD tarr, double S, VD karr, double r, int n);
 void printCFvol(modelPara p, double tau, int n);
 void printIntegrandVIXoption(modelPara p, double tau, double K, double tbar, int n);
 void printVIXcalls(modelPara p, VD tau, double tbar, VD K, double r, int n);
+void printSPXgradient(modelPara p, double S, double r, int n, VD tau, VD K);
 
 int main() {
     modelPara mp = {3.0, 0.1, 0.08, -0.8, 0.25};
@@ -147,16 +142,26 @@ int main() {
     //printCFvol(mp, tarr[1], gl.nGrid>>1);
     //printIntegrandVIXoption(mp, tarr[5], karr[5], tbar, gl.nGrid>>1);
     //printVIXcalls(mp, tarr, tbar, karr, r, (int)karr.size());
+    printSPXgradient(mp, S, r, (int)karr.size(), tarr, karr);
 }
 
 
 //Functions for comparing results
+void printSPXgradient(modelPara p, double S, double r, int n, VD tau, VD K){
+    VD gradients = gradientSPXprice(p, S, r, n, tau, K);
+    for (int j = 0; j < 200; j++){
+        std::cout << std::setprecision(16);
+        std::cout << "gradient" << j << "   " <<  gradients[j] << std::endl;
+    }
+}
+
+
 void showSPXcallPrices(modelPara mp, VD tarr, double S, VD karr, double r, int n){
 
     VD SPXprices = SPXprice(mp, tarr, S, karr, r, n);
 
     for (int j = 0; j < n; j++) {
-        std::cout << std::setprecision(16);
+        std::cout << std::fixed << std::setprecision(16);
         std::cout << "strike_price  " << karr[j] << std::endl;
         std::cout << "maturity      " << tarr[j] << std::endl;
         std::cout << "SPXcall_price " << SPXprices[j] << std::endl
@@ -223,10 +228,12 @@ CFPriceData CFprice(CD u, modelPara p, double tau, double S, double r) {
     return ret;
 }
 
-CFpriceGrad gradCFprice(CD u, modelPara p, double tau, double S, double r){
-    CFpriceGrad ret;
+VD gradSPXintgrand(double u, modelPara p, double tau, double K, double S, double r){
+    VD gradSPXint;
+    gradSPXint.reserve(5);
+    CD inputU = u - i*0.5;
     double var = pow(p.sigma, 2);
-    CFPriceData CFP = CFprice(u, p, tau, S, r);
+    CFPriceData CFP = CFprice(inputU, p, tau, S, r);
     CD B = exp(CFP.D);
     CD tmpBase = p.k*tau*CFP.iu/p.sigma;
     double tmp1 = 2*p.k*p.vbar/var;
@@ -245,24 +252,36 @@ CFpriceGrad gradCFprice(CD u, modelPara p, double tau, double S, double r){
     CD B_rho = exp(p.k*tau*0.5)/p.v0*(revA2*d_rho-dOverA2/CFP.A2*A2_rho);
 
     //Partials for k
-    CD B_k = i/(p.sigma*u)*B_rho + B*tau*0.5;
+    CD B_k = i/(p.sigma*inputU)*B_rho + B*tau*0.5;
 
     //Partials for sigma
-    CD d_sigma = (p.rho/p.sigma - 1.0/CFP.xi)*d_rho+p.sigma*pow(u, 2)/CFP.d;
+    CD d_sigma = (p.rho/p.sigma - 1.0/CFP.xi)*d_rho+p.sigma*pow(inputU, 2)/CFP.d;
     CD A1_sigma = CFP.interU*tau*d_sigma*coshInterD/2.0;
     CD A2_sigma = p.rho/p.sigma*A2_rho - interXi/(p.v0*tau*CFP.xi*CFP.iu)
         *A1_rho + p.sigma*tau*CFP.A1/(2.0*p.v0);
     CD A_sigma = revA2*A1_sigma - AoverA2*A2_sigma;
 
-    //Gradient
-    ret.v0Par = (-CFP.A / p.v0) * CFP.CFPrice;
-    ret.vbarPar = (tmp1/p.vbar*CFP.D - tmpBase*p.rho) * CFP.CFPrice;
-    ret.rhoPar = (-A_rho+tmp1/CFP.d*(d_rho-dOverA2*A2_rho)-tmpBase*p.vbar)*CFP.CFPrice;
-    ret.kPar = (1.0/(p.sigma*CFP.iu)*A_rho + tmp1/p.k*CFP.D + tmp1/B*B_k
+    //Gradient of CF price
+    CD v0Par = (-CFP.A / p.v0) * CFP.CFPrice;
+    CD vbarPar = (tmp1/p.vbar*CFP.D - tmpBase*p.rho) * CFP.CFPrice;
+    CD rhoPar = (-A_rho+tmp1/CFP.d*(d_rho-dOverA2*A2_rho)-tmpBase*p.vbar)*CFP.CFPrice;
+    CD kPar = (1.0/(p.sigma*CFP.iu)*A_rho + tmp1/p.k*CFP.D + tmp1/B*B_k
         - tmpBase/p.k*p.vbar*p.rho) * CFP.CFPrice;
-    ret.sigmaPar = (-A_sigma - 2.0*tmp1/p.sigma*CFP.D + tmp1/CFP.d*(d_sigma
+    CD sigmaPar = (-A_sigma - 2.0*tmp1/p.sigma*CFP.D + tmp1/CFP.d*(d_sigma
         - dOverA2*A2_sigma) + tmpBase*p.vbar*p.rho/p.sigma) * CFP.CFPrice;
-    return ret;
+
+    
+    double x = log(S);
+    double rT = r * tau;
+    double kappa = x - log(K) + rT;
+    CD integrand1 = exp(i * u * kappa - i * inputU * (x + rT));
+    double integrand2 = pow(u, 2) + 0.25;
+    gradSPXint[0] = real(integrand1 * v0Par) / integrand2;
+    gradSPXint[1] = real(integrand1 * vbarPar) / integrand2;
+    gradSPXint[2] = real(integrand1 * rhoPar) / integrand2;
+    gradSPXint[3] = real(integrand1 * kPar) / integrand2;
+    gradSPXint[4] = real(integrand1 * sigmaPar) / integrand2;
+    return gradSPXint;
 }
 
 CD CFvol(CD u, modelPara p, double tau) {
@@ -345,6 +364,43 @@ VD SPXprice(modelPara p, VD tau, double S, VD K, double r, int n) { //tau and K 
     }
 
     return SPXs; //Here can return an adress of the VD.
+}
+
+VD gradientSPXprice(modelPara p, double S, double r, int n, VD &tau, VD& K){
+    int nGrid = gl.nGrid>>1;
+    VD u = *gl.abs;
+    VD w = *gl.weights;
+
+    VD gradSPX, upInt, downInt, glCollect;
+    gradSPX.reserve(5*n);
+    upInt.reserve(5);
+    downInt.reserve(5);
+    glCollect.reserve(5);
+
+    int k, l;
+    double strike, T, rT, up_u, down_u;
+    for(k=l=0; l < n; l++){
+        strike = K[l];//do I need to use *K?
+        T = tau[l];
+        rT = r*T;
+        for (int cc = 0; cc < 5; cc++){
+            glCollect[cc] = 0.0;
+        }
+        for (int count=0; count < nGrid; count++){
+            up_u = mid + u[count] * halfRange;
+            down_u = mid - u[count] * halfRange;
+            upInt = gradSPXintgrand(up_u, p, T, strike, S, r);
+            downInt = gradSPXintgrand(down_u, p, T, strike, S, r);
+            for (int j = 0; j < 5; j++)
+                glCollect[j] += w[count]*(upInt[j] + downInt[j]);
+        }
+        for (int p = 0; p < 5; p++){
+            glCollect[p] = glCollect[p]*halfRange;
+            gradSPX[k++] = - sqrt(strike * S) * exp(-rT * 0.5) / pi * glCollect[p];
+        }
+    }
+
+    return gradSPX;
 }
 
 //For this pricing, the u is not a real but can be a complex. See smile page
