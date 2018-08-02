@@ -83,7 +83,7 @@ double SPXintegrand(double u, modelPara p, double tau, double K, double S,
                     double r);
 VD SPXprice(modelPara p, VD tau, double S, VD K, double r, int n);
 CD CFvol(CD u, modelPara p, double tau);
-double VIXintegrand(double u, modelPara p, double tau, double K, double tbar);
+double VIXintegrand(CD u, modelPara p, double tau, double K, double tbar);
 VD VIXprice(modelPara p, VD &tau, double tbar, VD &K, double r, int n);
 
 //For comparing
@@ -123,7 +123,7 @@ int main() {
 
     //showSPXcallPrices(mp, tarr, S, karr, r, (int)karr.size());
     //printCFvol(mp, tarr[1], gl.nGrid>>1);
-    printIntegrandVIXoption(mp, tarr[5], karr[5], tbar, gl.nGrid>>1);
+    //printIntegrandVIXoption(mp, tarr[5], karr[5], tbar, gl.nGrid>>1);
     printVIXcalls(mp, tarr, tbar, karr, r, (int)karr.size());
 }
 
@@ -239,12 +239,12 @@ double SPXintegrand(double u, modelPara p, double tau, double K, double S,
     return SPXint;
 }
 
-double VIXintegrand(double u, modelPara p, double tau, double K, double tbar){
+double VIXintegrand(CD u, modelPara p, double tau, double K, double tbar){
     CD iu = i * u;
     double k = p.k;
     double vbar = p.vbar;
     double atauBar = (1.0 - exp(-tbar*k))/k;
-    double interU = -u * atauBar/tbar;
+    CD interU = -u * atauBar/tbar;
     double btauBar = vbar*(tbar - atauBar);
     CD CFvola = CFvol(interU, p, tau);
     CD part1 = exp(-iu*btauBar/tbar);
@@ -316,8 +316,8 @@ VD VIXprice(modelPara p, VD &tau, double tbar, VD &K, double r, int n){
         for (int count = 0; count < nGrid; count++){
             up_u = mid + u[count] * halfRange;
             down_u = mid - u[count] * halfRange;
-            upInt = VIXintegrand(up_u, p, T, strike, tbar);
-            downInt = VIXintegrand(down_u, p, T, strike, tbar);
+            upInt = VIXintegrand(up_u+i, p, T, strike, tbar); //What should be the complex part be? By adding this magic number I already made the price positive, but how to choose the complex part?
+            downInt = VIXintegrand(down_u+i, p, T, strike, tbar);
             glCollect += w[count] * (upInt + downInt);
         }
 
