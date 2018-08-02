@@ -63,6 +63,19 @@ struct GLsetting {
 static GLsetting gl = {64, &x64, &w64};
 //static GLsetting gl = {128, &x128, &w128};
 
+struct CFPriceData {
+    CD CFPrice;
+    CD iu;
+    CD interU;
+    CD xi;
+    CD d;
+    CD interD;
+    CD A1;
+    CD A2;
+    CD A;
+    CD D;
+};
+
 struct mktPara {
     double S;
     double r;
@@ -78,7 +91,7 @@ struct modelPara {
     double sigma;
 };
 
-CD CFprice(CD u, modelPara p, double tau, double S, double r);
+CFPriceData CFprice(CD u, modelPara p, double tau, double S, double r);
 double SPXintegrand(double u, modelPara p, double tau, double K, double S,
                     double r);
 VD SPXprice(modelPara p, VD tau, double S, VD K, double r, int n);
@@ -96,7 +109,7 @@ int main() {
     modelPara mp = {3.0, 0.1, 0.08, -0.8, 0.25};
     double S = 1.0;
     double r = 0.02;
-    double tbar = 30/365.0;
+    //double tbar = 30/365.0;
     const VD karr = {0.9371, 0.8603, 0.8112, 0.7760, 0.7470, 0.7216, 0.6699,
                      0.6137, 0.9956, 0.9868, 0.9728, 0.9588, 0.9464, 0.9358,
                      0.9175, 0.9025, 1.0427, 1.0463, 1.0499, 1.0530, 1.0562,
@@ -121,10 +134,10 @@ int main() {
 
     mktPara marP = {S, r, tarr, karr};
 
-    //showSPXcallPrices(mp, tarr, S, karr, r, (int)karr.size());
+    showSPXcallPrices(mp, tarr, S, karr, r, (int)karr.size());
     //printCFvol(mp, tarr[1], gl.nGrid>>1);
     //printIntegrandVIXoption(mp, tarr[5], karr[5], tbar, gl.nGrid>>1);
-    printVIXcalls(mp, tarr, tbar, karr, r, (int)karr.size());
+    //printVIXcalls(mp, tarr, tbar, karr, r, (int)karr.size());
 }
 
 
@@ -179,7 +192,7 @@ void printIntegrandVIXoption(modelPara p, double tau, double K, double tbar, int
 
 
 //Functions to keep
-CD CFprice(CD u, modelPara p, double tau, double S, double r) {
+CFPriceData CFprice(CD u, modelPara p, double tau, double S, double r) {
     double k = p.k;
     double vbar = p.vbar;
     double v0 = p.v0;
@@ -202,7 +215,9 @@ CD CFprice(CD u, modelPara p, double tau, double S, double r) {
     CD CF = exp(iu * (log(S) + r * tau) - tmp * rho * tau * iu - A +
                 2 * tmp * D / sigma);
 
-    return CF;
+
+    CFPriceData ret = {CF, iu, interU, xi, d, interD, A1, A2, A, D};
+    return ret;
 }
 
 CD CFvol(CD u, modelPara p, double tau) {
@@ -233,7 +248,8 @@ double SPXintegrand(double u, modelPara p, double tau, double K, double S,
     double rT = r * tau;
     double kappa = x - log(K) + rT;
     CD integrand1 = exp(iu * kappa - i * interU * (x + rT));
-    CD CFpri = CFprice(interU, p, tau, S, r);
+    CFPriceData tmp = CFprice(interU, p, tau, S, r);
+    CD CFpri = tmp.CFPrice;
     double SPXint = real(integrand1 * CFpri) / (pow(u, 2) + 0.25);
 
     return SPXint;
@@ -295,7 +311,7 @@ VD SPXprice(modelPara p, VD tau, double S, VD K, double r, int n) { //tau and K 
 //7, equation (11). Currently, u is real which means im(u) is 0, but in the
 //paper it said it should be > 0. Do I choose one im(u) and how to choose?
 //So does this numerical integration still work? And what should the upper
-//boundary be? 
+//boundary be?
 VD VIXprice(modelPara p, VD &tau, double tbar, VD &K, double r, int n){
     int nGrid = gl.nGrid;
 
@@ -327,5 +343,12 @@ VD VIXprice(modelPara p, VD &tau, double tbar, VD &K, double r, int n){
     }
     return VIXs;
 }
+
+
+
+
+
+
+
 
 

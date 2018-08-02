@@ -1,7 +1,8 @@
 CC = g++
 CFLAGS = -Wall -Werror -Wextra -O2 -flto -march=native -mtune=native
 LIBS = -lm -llevmar -lfaddeeva
-DEBUGFLAGS = -fno-omit-frame-pointer -g3 -Og
+DEBUGFLAGS = -fno-omit-frame-pointer -g3
+SANITISERS = -fsanitize=undefined -fsanitize=address
 
 all: HC CFG
 
@@ -28,3 +29,8 @@ perf:
 
 diff: all
 	./compare_outputs
+
+sanitise:
+	$(CC) $(CFLAGS) $(DEBUGFLAGS) $(SANITISERS) $(LIBS) -fprofile-generate CFG.cpp -o CFG
+	./CFG >/dev/null
+	$(CC) $(CFLAGS) $(DEBUGFLAGS) $(SANITISERS) $(LIBS) -fprofile-use CFG.cpp -o CFG
