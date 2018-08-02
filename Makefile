@@ -1,7 +1,7 @@
 CC = g++
 CFLAGS = -Wall -Werror -Wextra -O2 -flto -march=native -mtune=native
 LIBS = -lm -llevmar -lfaddeeva
-DEBUGFLAGS = -fno-omit-frame-pointer -g3
+DEBUGFLAGS = -fno-omit-frame-pointer -g3 -Og
 
 all: HC CFG
 
