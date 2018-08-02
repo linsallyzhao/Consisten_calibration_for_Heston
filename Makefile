@@ -1,5 +1,5 @@
 CC = g++
-CFLAGS = -Wall -Werror -Wextra -O3 -flto -march=native -mtune=native
+CFLAGS = -Wall -Werror -Wextra -O2 -flto -march=native -mtune=native
 LIBS = -lm -llevmar -lfaddeeva
 DEBUGFLAGS = -fno-omit-frame-pointer -g3
 
