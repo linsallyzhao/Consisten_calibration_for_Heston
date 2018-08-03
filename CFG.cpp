@@ -76,6 +76,21 @@ struct CFPriceData {
     CD D;
 };
 
+struct CFvolData{
+    CD CFvol;
+    CD G;
+    CD F;
+};
+
+struct intVIXdata{
+    double VIXint;
+    CD rawVIXint;
+    double atauBar;
+    CD G;
+    CD F;
+    CD inputU;
+    CD iu;
+};
 
 struct mktPara {
     double S;
@@ -96,11 +111,12 @@ CFPriceData CFprice(CD u, modelPara p, double tau, double S, double r);
 double SPXintegrand(double u, modelPara p, double tau, double K, double S,
                     double r);
 VD SPXprice(modelPara p, VD tau, double S, VD K, double r, int n);
-CD CFvol(CD u, modelPara p, double tau);
-double VIXintegrand(CD u, modelPara p, double tau, double K, double tbar);
+CFvolData CFvol(CD u, modelPara p, double tau);
+intVIXdata VIXintegrand(CD u, modelPara p, double tau, double K, double tbar);
 VD VIXprice(modelPara p, VD &tau, double tbar, VD &K, double r, int n);
 VD gradSPXintgrand(double u, modelPara p, double tau, double K, double S, double r);
 VD gradientSPXprice(modelPara p, double S, double r, int n, VD &tau, VD &K);
+VD gradVIXintegrand(CD u, modelPara p, double tau, double K, double tbar);
 
 //For comparing
 void showSPXcallPrices(modelPara mp, VD tarr, double S, VD karr, double r, int n);
@@ -113,7 +129,7 @@ int main() {
     modelPara mp = {3.0, 0.1, 0.08, -0.8, 0.25};
     double S = 1.0;
     double r = 0.02;
-    //double tbar = 30/365.0;
+    double tbar = 30/365.0;
     const VD karr = {0.9371, 0.8603, 0.8112, 0.7760, 0.7470, 0.7216, 0.6699,
                      0.6137, 0.9956, 0.9868, 0.9728, 0.9588, 0.9464, 0.9358,
                      0.9175, 0.9025, 1.0427, 1.0463, 1.0499, 1.0530, 1.0562,
@@ -138,11 +154,11 @@ int main() {
 
     mktPara marP = {S, r, tarr, karr};
 
-    showSPXcallPrices(mp, tarr, S, karr, r, (int)karr.size());
-    //printCFvol(mp, tarr[1], gl.nGrid>>1);
-    //printIntegrandVIXoption(mp, tarr[5], karr[5], tbar, gl.nGrid>>1);
-    //printVIXcalls(mp, tarr, tbar, karr, r, (int)karr.size());
-    printSPXgradient(mp, S, r, (int)karr.size(), tarr, karr);
+    //showSPXcallPrices(mp, tarr, S, karr, r, (int)karr.size());
+    printCFvol(mp, tarr[1], gl.nGrid>>1);
+    printIntegrandVIXoption(mp, tarr[5], karr[5], tbar, gl.nGrid>>1);
+    printVIXcalls(mp, tarr, tbar, karr, r, (int)karr.size());
+    //printSPXgradient(mp, S, r, (int)karr.size(), tarr, karr);
 }
 
 
@@ -181,13 +197,13 @@ void printVIXcalls(modelPara p, VD tau, double tbar, VD K, double r, int n){
 }
 
 void printCFvol(modelPara p, double tau, int n){
-    CD CFv;
+    CFvolData CFv;
     VD u = *gl.abs;
     for(int j = 0; j < n; j++){
         std::cout << std::setprecision(16);
         std::cout << "u " << u[j] <<  std::endl;
         CFv = CFvol(u[j]*one, p, tau);
-        std::cout << "CFvol " << CFv << std::endl;
+        std::cout << "CFvol " << CFv.CFvol << std::endl;
     }
 }
 
@@ -197,7 +213,7 @@ void printIntegrandVIXoption(modelPara p, double tau, double K, double tbar, int
     for (int j = 0; j < n; j++){
         std::cout << std::setprecision(16);
         std::cout << "u " << u[j] << ", ";
-        VIXint = VIXintegrand(u[j], p, tau, K, tbar);
+        VIXint = VIXintegrand(u[j], p, tau, K, tbar).VIXint;
         std::cout << "VIXintegrand " << VIXint << std::endl;
     }
 }
@@ -270,7 +286,6 @@ VD gradSPXintgrand(double u, modelPara p, double tau, double K, double S, double
     CD sigmaPar = (-A_sigma - 2.0*tmp1/p.sigma*CFP.D + tmp1/CFP.d*(d_sigma
         - dOverA2*A2_sigma) + tmpBase*p.vbar*p.rho/p.sigma) * CFP.CFPrice;
 
-    
     double x = log(S);
     double rT = r * tau;
     double kappa = x - log(K) + rT;
@@ -284,7 +299,7 @@ VD gradSPXintgrand(double u, modelPara p, double tau, double K, double S, double
     return gradSPXint;
 }
 
-CD CFvol(CD u, modelPara p, double tau) {
+CFvolData CFvol(CD u, modelPara p, double tau) {
     double var = pow(p.sigma, 2);
 
     CD iu = u * i;
@@ -293,42 +308,94 @@ CD CFvol(CD u, modelPara p, double tau) {
     CD F = p.v0*iu/G * exp(-ktauH);
 
     CD CF = pow(exp(ktauH)/G, 2*p.k*p.vbar/var) * exp(F);
+    CFvolData ret = {CF, G, F};
 
-    return CF;
+    return ret;
 }
-
-
 
 double SPXintegrand(double u, modelPara p, double tau, double K, double S,
                     double r) {
     CD iu = i * u;
-    CD interU = u - i * 0.5;
+    CD inputU = u - i * 0.5;
     double x = log(S);
     double rT = r * tau;
     double kappa = x - log(K) + rT;
-    CD integrand1 = exp(iu * kappa - i * interU * (x + rT));
-    CFPriceData tmp = CFprice(interU, p, tau, S, r);
+    CD integrand1 = exp(iu * kappa - i * inputU * (x + rT));
+    CFPriceData tmp = CFprice(inputU, p, tau, S, r);
     CD CFpri = tmp.CFPrice;
     double SPXint = real(integrand1 * CFpri) / (pow(u, 2) + 0.25);
 
     return SPXint;
 }
 
-double VIXintegrand(CD u, modelPara p, double tau, double K, double tbar){
+intVIXdata VIXintegrand(CD u, modelPara p, double tau, double K, double tbar){
     CD iu = i * u;
     double k = p.k;
     double vbar = p.vbar;
     double atauBar = (1.0 - exp(-tbar*k))/k;
-    CD interU = -u * atauBar/tbar;
+    CD inputU = -u * atauBar/tbar;
     double btauBar = vbar*(tbar - atauBar);
-    CD CFvola = CFvol(interU, p, tau);
+    CFvolData tmp = CFvol(inputU, p, tau);
+    CD CFvola = tmp.CFvol;
     CD part1 = exp(-iu*btauBar/tbar);
-    CD part2 = 1.0 - Faddeeva::erf(K/100.0 * sqrt(-iu)); //Need complex error function here.
+    CD part2 = 1.0 - Faddeeva::erf(K/100.0 * sqrt(-iu));
     CD part3 = pow(-iu, 3/2.0);
+    CD rawInt = CFvola*part1*part2/part3;
 
-    double VIXint = real(CFvola*part1*part2/part3);
+    double VIXint = real(rawInt);
 
-    return VIXint;
+    intVIXdata ret = {VIXint, rawInt, atauBar, tmp.G, tmp.F, inputU, iu};
+
+    return ret;
+}
+
+VD gradVIXintegrand(CD u, modelPara p, double tau, double K, double tbar){
+    intVIXdata inter = VIXintegrand(u, p, tau, K, tbar);
+    double var = pow(p.sigma, 2);
+    double tmp1 = 2.0*p.k/var;
+    double tmp2 = p.k*tau*0.5;
+    double tmp3 = exp(tmp2);
+    CD tmp4 = pow(inter.G, 2);
+    CD iU = i * inter.inputU;
+    CD iuOverTbar = inter.iu/tbar;
+
+    //equation (3.34)
+    CD G_sigma = -2.0*p.sigma*iU/p.k*sinh(tmp2);
+
+    CD h_v0 = inter.F/p.v0;
+    CD h_vbar = tmp1*log(tmp3/inter.G);
+    CD h_sigma = -2.0*p.vbar/p.sigma*h_vbar - tmp1*p.vbar/inter.G*G_sigma
+        - p.v0*iU/(tmp4*tmp3)*G_sigma;
+    CD h_k = -p.sigma/(2.0*p.k)*h_sigma + p.vbar*tau*iU/(inter.G*tmp3)
+        - p.v0*inter.inputU*tau/(2.0*p.k*tmp4)*(2.0*p.k*i + inter.inputU*var);
+
+    //equation (3.16)
+    double atauBar_k = (tbar - inter.atauBar*(p.k*tbar + 1))/p.k;
+    double btauBar_vbar = p.vbar - inter.atauBar;
+    double btauBar_k = -p.vbar*atauBar_k;
+
+    //equation (3.23), (3.24)
+    CD G_U = (inter.G - tmp3)/inter.inputU;
+    CD hPrime = h_k - u/tbar*(inter.F/inter.inputU - 1.0/inter.G*(tmp1*p.vbar
+        + inter.F)*G_U)*atauBar_k;
+
+    //equation (3.29)
+    CD H_vbar = h_vbar - iuOverTbar*btauBar_vbar;
+    CD H_k = hPrime - iuOverTbar*btauBar_k;
+
+
+    VD ret;
+    ret.reserve(5);
+
+    //equation (3.28)
+    ret[0] = real(h_v0*inter.rawVIXint);
+    ret[1] = real(H_vbar*inter.rawVIXint);
+    ret[2] = 0.0;
+    ret[3] = real(H_k*inter.rawVIXint);
+    ret[4] = real(h_sigma*inter.rawVIXint);
+
+
+    return ret;
 }
 
 
@@ -428,8 +495,8 @@ VD VIXprice(modelPara p, VD &tau, double tbar, VD &K, double r, int n){
         for (int count = 0; count < nGrid; count++){
             up_u = mid + u[count] * halfRange;
             down_u = mid - u[count] * halfRange;
-            upInt = VIXintegrand(up_u+i, p, T, strike, tbar); //What should be the complex part be? By adding this magic number I already made the price positive, but how to choose the complex part?
-            downInt = VIXintegrand(down_u+i, p, T, strike, tbar);
+            upInt = VIXintegrand(up_u+i, p, T, strike, tbar).VIXint; //What should be the complex part be? By adding this magic number I already made the price positive, but how to choose the complex part?
+            downInt = VIXintegrand(down_u+i, p, T, strike, tbar).VIXint;
             glCollect += w[count] * (upInt + downInt);
         }
 
