@@ -117,6 +117,7 @@ VD VIXprice(modelPara p, VD &tau, double tbar, VD &K, double r, int n);
 VD gradSPXintgrand(double u, modelPara p, double tau, double K, double S, double r);
 VD gradientSPXprice(modelPara p, double S, double r, int n, VD &tau, VD &K);
 VD gradVIXintegrand(CD u, modelPara p, double tau, double K, double tbar);
+VD gradientVIXprice(modelPara p, double r, int n, VD &tau, VD& K, double tbar);
 
 //For comparing
 void showSPXcallPrices(modelPara mp, VD tarr, double S, VD karr, double r, int n);
@@ -124,6 +125,7 @@ void printCFvol(modelPara p, double tau, int n);
 void printIntegrandVIXoption(modelPara p, double tau, double K, double tbar, int n);
 void printVIXcalls(modelPara p, VD tau, double tbar, VD K, double r, int n);
 void printSPXgradient(modelPara p, double S, double r, int n, VD tau, VD K);
+void printVIXgradient(modelPara p, double tbar, double r, int n, VD tau, VD K);
 
 int main() {
     modelPara mp = {3.0, 0.1, 0.08, -0.8, 0.25};
@@ -155,10 +157,11 @@ int main() {
     mktPara marP = {S, r, tarr, karr};
 
     //showSPXcallPrices(mp, tarr, S, karr, r, (int)karr.size());
+    //printSPXgradient(mp, S, r, (int)karr.size(), tarr, karr);
     printCFvol(mp, tarr[1], gl.nGrid>>1);
     printIntegrandVIXoption(mp, tarr[5], karr[5], tbar, gl.nGrid>>1);
     printVIXcalls(mp, tarr, tbar, karr, r, (int)karr.size());
-    //printSPXgradient(mp, S, r, (int)karr.size(), tarr, karr);
+    printVIXgradient(mp, tbar, r, (int)karr.size(), tarr, karr);
 }
 
 
@@ -171,6 +174,13 @@ void printSPXgradient(modelPara p, double S, double r, int n, VD tau, VD K){
     }
 }
 
+void printVIXgradient(modelPara p, double tbar, double r, int n, VD tau, VD K){
+    VD gradients = gradientVIXprice(p, r, n, tau, K, tbar);
+    for(int j = 0 ; j < 200; j++){
+        std::cout << std::setprecision(16);
+        std::cout << "gradient" << j << "   " << gradients[j] << std::endl;
+    }
+}
 
 void showSPXcallPrices(modelPara mp, VD tarr, double S, VD karr, double r, int n){
 
@@ -433,43 +443,6 @@ VD SPXprice(modelPara p, VD tau, double S, VD K, double r, int n) { //tau and K 
     return SPXs; //Here can return an adress of the VD.
 }
 
-VD gradientSPXprice(modelPara p, double S, double r, int n, VD &tau, VD& K){
-    int nGrid = gl.nGrid>>1;
-    VD u = *gl.abs;
-    VD w = *gl.weights;
-
-    VD gradSPX, upInt, downInt, glCollect;
-    gradSPX.reserve(5*n);
-    upInt.reserve(5);
-    downInt.reserve(5);
-    glCollect.reserve(5);
-
-    int k, l;
-    double strike, T, rT, up_u, down_u;
-    for(k=l=0; l < n; l++){
-        strike = K[l];//do I need to use *K?
-        T = tau[l];
-        rT = r*T;
-        for (int cc = 0; cc < 5; cc++){
-            glCollect[cc] = 0.0;
-        }
-        for (int count=0; count < nGrid; count++){
-            up_u = mid + u[count] * halfRange;
-            down_u = mid - u[count] * halfRange;
-            upInt = gradSPXintgrand(up_u, p, T, strike, S, r);
-            downInt = gradSPXintgrand(down_u, p, T, strike, S, r);
-            for (int j = 0; j < 5; j++)
-                glCollect[j] += w[count]*(upInt[j] + downInt[j]);
-        }
-        for (int p = 0; p < 5; p++){
-            glCollect[p] = glCollect[p]*halfRange;
-            gradSPX[k++] = - sqrt(strike * S) * exp(-rT * 0.5) / pi * glCollect[p];
-        }
-    }
-
-    return gradSPX;
-}
-
 //For this pricing, the u is not a real but can be a complex. See smile page
 //7, equation (11). Currently, u is real which means im(u) is 0, but in the
 //paper it said it should be > 0. Do I choose one im(u) and how to choose?
@@ -508,10 +481,77 @@ VD VIXprice(modelPara p, VD &tau, double tbar, VD &K, double r, int n){
 }
 
 
+VD gradientSPXprice(modelPara p, double S, double r, int n, VD &tau, VD& K){
+    int nGrid = gl.nGrid>>1;
+    VD u = *gl.abs;
+    VD w = *gl.weights;
 
+    VD gradSPX, upInt, downInt, glCollect;
+    gradSPX.reserve(5*n);
+    upInt.reserve(5);
+    downInt.reserve(5);
+    glCollect.reserve(5);
 
+    int k, l;
+    double strike, T, rT, up_u, down_u;
+    for(k=l=0; l < n; l++){
+        strike = K[l];//do I need to use *K?
+        T = tau[l];
+        rT = r*T;
+        for (int cc = 0; cc < 5; cc++){
+            glCollect[cc] = 0.0;
+        }
+        for (int count=0; count < nGrid; count++){
+            up_u = mid + u[count] * halfRange;
+            down_u = mid - u[count] * halfRange;
+            upInt = gradSPXintgrand(up_u, p, T, strike, S, r);
+            downInt = gradSPXintgrand(down_u, p, T, strike, S, r);
+            for (int j = 0; j < 5; j++)
+                glCollect[j] += w[count]*(upInt[j] + downInt[j]);
+        }
+        for (int p = 0; p < 5; p++){
+            glCollect[p] = glCollect[p]*halfRange;
+            gradSPX[k++] = - sqrt(strike * S) * exp(-rT * 0.5) / pi * glCollect[p];
+        }
+    }
 
+    return gradSPX;
+}
 
+VD gradientVIXprice(modelPara p, double r, int n, VD &tau, VD& K, double tbar){
+    int nGrid = gl.nGrid>>1;
+    VD u = *gl.abs;
+    VD w = *gl.weights;
 
+    VD gradVIX, upInt, downInt, glCollect;
+    gradVIX.reserve(5*n);
+    upInt.reserve(5);
+    downInt.reserve(5);
+    glCollect.reserve(5);
+
+    int k, l;
+    double strike, T, discount, up_u, down_u;
+    double fixedPart = 50/sqrt(pi);
+    for (k=l=0; l < n; l++){
+        strike = K[l];
+        T = tau[l];
+        discount = exp(-r*T);
+        for (int cc = 0; cc < 5; cc++) glCollect[cc] = 0.0;
+        for (int count = 0; count < nGrid; count++){
+            up_u = mid + u[count] * halfRange;
+            down_u = mid - u[count] * halfRange;
+            upInt = gradVIXintegrand(up_u+i, p, T, strike, tbar);
+            downInt = gradVIXintegrand(down_u+i, p, T, strike, tbar);
+            for (int j = 0; j < 5; j++)
+                glCollect[j] = w[count]*(upInt[j] + downInt[j]);
+        }
+        for (int p = 0; p < 5; p++){
+            glCollect[p] = glCollect[p]*halfRange;
+            gradVIX[k++] = fixedPart*discount*glCollect[p];
+        }
+    }
+
+    return gradVIX;
+}
 
 
