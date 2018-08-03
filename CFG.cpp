@@ -111,11 +111,12 @@ CFPriceData CFprice(CD u, modelPara p, double tau, double S, double r);
 double SPXintegrand(double u, modelPara p, double tau, double K, double S,
                     double r);
 VD SPXprice(modelPara p, VD tau, double S, VD K, double r, int n);
+VD gradSPXintgrand(double u, modelPara p, double tau, double K, double S, double r);
+VD gradientSPXprice(modelPara p, double S, double r, int n, VD &tau, VD &K);
+
 CFvolData CFvol(CD u, modelPara p, double tau);
 intVIXdata VIXintegrand(CD u, modelPara p, double tau, double K, double tbar);
 VD VIXprice(modelPara p, VD &tau, double tbar, VD &K, double r, int n);
-VD gradSPXintgrand(double u, modelPara p, double tau, double K, double S, double r);
-VD gradientSPXprice(modelPara p, double S, double r, int n, VD &tau, VD &K);
 VD gradVIXintegrand(CD u, modelPara p, double tau, double K, double tbar);
 VD gradientVIXprice(modelPara p, double r, int n, VD &tau, VD& K, double tbar);
 
@@ -131,7 +132,7 @@ int main() {
     modelPara mp = {3.0, 0.1, 0.08, -0.8, 0.25};
     double S = 1.0;
     double r = 0.02;
-    double tbar = 30/365.0;
+    //double tbar = 30/365.0;
     const VD karr = {0.9371, 0.8603, 0.8112, 0.7760, 0.7470, 0.7216, 0.6699,
                      0.6137, 0.9956, 0.9868, 0.9728, 0.9588, 0.9464, 0.9358,
                      0.9175, 0.9025, 1.0427, 1.0463, 1.0499, 1.0530, 1.0562,
@@ -156,12 +157,12 @@ int main() {
 
     mktPara marP = {S, r, tarr, karr};
 
-    //showSPXcallPrices(mp, tarr, S, karr, r, (int)karr.size());
-    //printSPXgradient(mp, S, r, (int)karr.size(), tarr, karr);
-    printCFvol(mp, tarr[1], gl.nGrid>>1);
-    printIntegrandVIXoption(mp, tarr[5], karr[5], tbar, gl.nGrid>>1);
-    printVIXcalls(mp, tarr, tbar, karr, r, (int)karr.size());
-    printVIXgradient(mp, tbar, r, (int)karr.size(), tarr, karr);
+    showSPXcallPrices(mp, tarr, S, karr, r, (int)karr.size());
+    printSPXgradient(mp, S, r, (int)karr.size(), tarr, karr);
+    //printCFvol(mp, tarr[1], gl.nGrid>>1);
+    //printIntegrandVIXoption(mp, tarr[5], karr[5], tbar, gl.nGrid>>1);
+    //printVIXcalls(mp, tarr, tbar, karr, r, (int)karr.size());
+    //printVIXgradient(mp, tbar, r, (int)karr.size(), tarr, karr);
 }
 
 
@@ -228,9 +229,6 @@ void printIntegrandVIXoption(modelPara p, double tau, double K, double tbar, int
     }
 }
 
-
-
-
 //Functions to keep
 CFPriceData CFprice(CD u, modelPara p, double tau, double S, double r) {
     double var = pow(p.sigma, 2);
@@ -252,6 +250,55 @@ CFPriceData CFprice(CD u, modelPara p, double tau, double S, double r) {
 
     CFPriceData ret = {CF, iu, interU, xi, d, interD, A1, A2, A, D};
     return ret;
+}
+
+double SPXintegrand(double u, modelPara p, double tau, double K, double S,
+                    double r) {
+    CD iu = i * u;
+    CD inputU = u - i * 0.5;
+    double x = log(S);
+    double rT = r * tau;
+    double kappa = x - log(K) + rT;
+    CD integrand1 = exp(iu * kappa - i * inputU * (x + rT));
+    CFPriceData tmp = CFprice(inputU, p, tau, S, r);
+    CD CFpri = tmp.CFPrice;
+    double SPXint = real(integrand1 * CFpri) / (pow(u, 2) + 0.25);
+
+    return SPXint;
+}
+
+VD SPXprice(modelPara p, VD tau, double S, VD K, double r, int n) { //tau and K can be passed by reference, but we will see, may be I'll make them const or static
+    int nGrid = gl.nGrid;
+
+    double up_u, down_u, upInt, downInt, strike, T, rT, glCollect,
+        glInt, SPXcall;
+    nGrid = nGrid >> 1;
+    VD u = *gl.abs;
+    VD w = *gl.weights;
+
+    VD SPXs;
+    SPXs.reserve(n);
+
+    for (int j = 0; j < n; j++) {
+        strike = K[j];
+        T = tau[j];
+        rT = r * T;
+        glCollect = 0.0;
+
+        for (int count = 0; count < nGrid; count++) {
+            up_u = mid + u[count] * halfRange;
+            down_u = mid - u[count] * halfRange;
+            upInt = SPXintegrand(up_u, p, T, strike, S, r);
+            downInt = SPXintegrand(down_u, p, T, strike, S, r);
+            glCollect += w[count] * (upInt + downInt);
+        }
+
+        glInt = halfRange * glCollect;
+        SPXcall = S - sqrt(strike * S) * exp(-rT * 0.5) / pi * glInt;
+        SPXs[j] = SPXcall;
+    }
+
+    return SPXs; //Here can return an adress of the VD.
 }
 
 VD gradSPXintgrand(double u, modelPara p, double tau, double K, double S, double r){
@@ -309,6 +356,45 @@ VD gradSPXintgrand(double u, modelPara p, double tau, double K, double S, double
     return gradSPXint;
 }
 
+VD gradientSPXprice(modelPara p, double S, double r, int n, VD &tau, VD& K){
+    int nGrid = gl.nGrid>>1;
+    VD u = *gl.abs;
+    VD w = *gl.weights;
+
+    VD gradSPX, upInt, downInt, glCollect;
+    gradSPX.reserve(5*n);
+    upInt.reserve(5);
+    downInt.reserve(5);
+    glCollect.reserve(5);
+
+    int k, l;
+    double strike, T, rT, up_u, down_u;
+    for(k=l=0; l < n; l++){
+        strike = K[l];//do I need to use *K?
+        T = tau[l];
+        rT = r*T;
+        for (int cc = 0; cc < 5; cc++){
+            glCollect[cc] = 0.0;
+        }
+        for (int count=0; count < nGrid; count++){
+            up_u = mid + u[count] * halfRange;
+            down_u = mid - u[count] * halfRange;
+            upInt = gradSPXintgrand(up_u, p, T, strike, S, r);
+            downInt = gradSPXintgrand(down_u, p, T, strike, S, r);
+            for (int j = 0; j < 5; j++)
+                glCollect[j] += w[count]*(upInt[j] + downInt[j]);
+        }
+        for (int p = 0; p < 5; p++){
+            glCollect[p] = glCollect[p]*halfRange;
+            gradSPX[k++] = - sqrt(strike * S) * exp(-rT * 0.5) / pi * glCollect[p];
+        }
+    }
+
+    return gradSPX;
+}
+
+
+//CF of vol, VIX option pricing, and gradient of VIX option pricing
 CFvolData CFvol(CD u, modelPara p, double tau) {
     double var = pow(p.sigma, 2);
 
@@ -321,21 +407,6 @@ CFvolData CFvol(CD u, modelPara p, double tau) {
     CFvolData ret = {CF, G, F};
 
     return ret;
-}
-
-double SPXintegrand(double u, modelPara p, double tau, double K, double S,
-                    double r) {
-    CD iu = i * u;
-    CD inputU = u - i * 0.5;
-    double x = log(S);
-    double rT = r * tau;
-    double kappa = x - log(K) + rT;
-    CD integrand1 = exp(iu * kappa - i * inputU * (x + rT));
-    CFPriceData tmp = CFprice(inputU, p, tau, S, r);
-    CD CFpri = tmp.CFPrice;
-    double SPXint = real(integrand1 * CFpri) / (pow(u, 2) + 0.25);
-
-    return SPXint;
 }
 
 intVIXdata VIXintegrand(CD u, modelPara p, double tau, double K, double tbar){
@@ -357,6 +428,43 @@ intVIXdata VIXintegrand(CD u, modelPara p, double tau, double K, double tbar){
     intVIXdata ret = {VIXint, rawInt, atauBar, tmp.G, tmp.F, inputU, iu};
 
     return ret;
+}
+
+//For this pricing, the u is not a real but can be a complex. See smile page
+//7, equation (11). Currently, u is real which means im(u) is 0, but in the
+//paper it said it should be > 0. Do I choose one im(u) and how to choose?
+//So does this numerical integration still work? And what should the upper
+//boundary be?
+VD VIXprice(modelPara p, VD &tau, double tbar, VD &K, double r, int n){
+    int nGrid = gl.nGrid;
+
+    double up_u, down_u, upInt, downInt, strike, T, discount, glCollect,
+        glInt, VIXcall;
+    nGrid = nGrid >> 1;
+    VD u = *gl.abs;
+    VD w = *gl.weights;
+
+    VD VIXs;
+    VIXs.reserve(n);
+
+    for (int j = 0; j < n; j++){
+        strike = K[j];
+        T = tau[j];
+        discount = exp(-r*T);
+        glCollect = 0.0;
+        for (int count = 0; count < nGrid; count++){
+            up_u = mid + u[count] * halfRange;
+            down_u = mid - u[count] * halfRange;
+            upInt = VIXintegrand(up_u+i, p, T, strike, tbar).VIXint; //What should be the complex part be? By adding this magic number I already made the price positive, but how to choose the complex part?
+            downInt = VIXintegrand(down_u+i, p, T, strike, tbar).VIXint;
+            glCollect += w[count] * (upInt + downInt);
+        }
+
+        glInt = halfRange * glCollect;
+        VIXcall = 50.0 * discount/sqrt(pi) * glInt;
+        VIXs[j] = VIXcall;
+    }
+    return VIXs;
 }
 
 VD gradVIXintegrand(CD u, modelPara p, double tau, double K, double tbar){
@@ -408,116 +516,6 @@ VD gradVIXintegrand(CD u, modelPara p, double tau, double K, double tbar){
     return ret;
 }
 
-
-VD SPXprice(modelPara p, VD tau, double S, VD K, double r, int n) { //tau and K can be passed by reference, but we will see, may be I'll make them const or static
-    int nGrid = gl.nGrid;
-
-    double up_u, down_u, upInt, downInt, strike, T, rT, glCollect,
-        glInt, SPXcall;
-    nGrid = nGrid >> 1;
-    VD u = *gl.abs;
-    VD w = *gl.weights;
-
-    VD SPXs;
-    SPXs.reserve(n);
-
-    for (int j = 0; j < n; j++) {
-        strike = K[j];
-        T = tau[j];
-        rT = r * T;
-        glCollect = 0.0;
-
-        for (int count = 0; count < nGrid; count++) {
-            up_u = mid + u[count] * halfRange;
-            down_u = mid - u[count] * halfRange;
-            upInt = SPXintegrand(up_u, p, T, strike, S, r);
-            downInt = SPXintegrand(down_u, p, T, strike, S, r);
-            glCollect += w[count] * (upInt + downInt);
-        }
-
-        glInt = halfRange * glCollect;
-        SPXcall = S - sqrt(strike * S) * exp(-rT * 0.5) / pi * glInt;
-        SPXs[j] = SPXcall;
-    }
-
-    return SPXs; //Here can return an adress of the VD.
-}
-
-//For this pricing, the u is not a real but can be a complex. See smile page
-//7, equation (11). Currently, u is real which means im(u) is 0, but in the
-//paper it said it should be > 0. Do I choose one im(u) and how to choose?
-//So does this numerical integration still work? And what should the upper
-//boundary be?
-VD VIXprice(modelPara p, VD &tau, double tbar, VD &K, double r, int n){
-    int nGrid = gl.nGrid;
-
-    double up_u, down_u, upInt, downInt, strike, T, discount, glCollect,
-        glInt, VIXcall;
-    nGrid = nGrid >> 1;
-    VD u = *gl.abs;
-    VD w = *gl.weights;
-
-    VD VIXs;
-    VIXs.reserve(n);
-
-    for (int j = 0; j < n; j++){
-        strike = K[j];
-        T = tau[j];
-        discount = exp(-r*T);
-        glCollect = 0.0;
-        for (int count = 0; count < nGrid; count++){
-            up_u = mid + u[count] * halfRange;
-            down_u = mid - u[count] * halfRange;
-            upInt = VIXintegrand(up_u+i, p, T, strike, tbar).VIXint; //What should be the complex part be? By adding this magic number I already made the price positive, but how to choose the complex part?
-            downInt = VIXintegrand(down_u+i, p, T, strike, tbar).VIXint;
-            glCollect += w[count] * (upInt + downInt);
-        }
-
-        glInt = halfRange * glCollect;
-        VIXcall = 50.0 * discount/sqrt(pi) * glInt;
-        VIXs[j] = VIXcall;
-    }
-    return VIXs;
-}
-
-
-VD gradientSPXprice(modelPara p, double S, double r, int n, VD &tau, VD& K){
-    int nGrid = gl.nGrid>>1;
-    VD u = *gl.abs;
-    VD w = *gl.weights;
-
-    VD gradSPX, upInt, downInt, glCollect;
-    gradSPX.reserve(5*n);
-    upInt.reserve(5);
-    downInt.reserve(5);
-    glCollect.reserve(5);
-
-    int k, l;
-    double strike, T, rT, up_u, down_u;
-    for(k=l=0; l < n; l++){
-        strike = K[l];//do I need to use *K?
-        T = tau[l];
-        rT = r*T;
-        for (int cc = 0; cc < 5; cc++){
-            glCollect[cc] = 0.0;
-        }
-        for (int count=0; count < nGrid; count++){
-            up_u = mid + u[count] * halfRange;
-            down_u = mid - u[count] * halfRange;
-            upInt = gradSPXintgrand(up_u, p, T, strike, S, r);
-            downInt = gradSPXintgrand(down_u, p, T, strike, S, r);
-            for (int j = 0; j < 5; j++)
-                glCollect[j] += w[count]*(upInt[j] + downInt[j]);
-        }
-        for (int p = 0; p < 5; p++){
-            glCollect[p] = glCollect[p]*halfRange;
-            gradSPX[k++] = - sqrt(strike * S) * exp(-rT * 0.5) / pi * glCollect[p];
-        }
-    }
-
-    return gradSPX;
-}
-
 VD gradientVIXprice(modelPara p, double r, int n, VD &tau, VD& K, double tbar){
     int nGrid = gl.nGrid>>1;
     VD u = *gl.abs;
@@ -553,5 +551,4 @@ VD gradientVIXprice(modelPara p, double r, int n, VD &tau, VD& K, double tbar){
 
     return gradVIX;
 }
-
 
