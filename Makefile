@@ -1,5 +1,5 @@
 CC = g++
-CFLAGS = -Wall -Werror -Wextra -O2 -flto -march=native -mtune=native
+CFLAGS = -Wall -Wextra -Wno-unused-parameter -Werror -O2 -flto -march=native -mtune=native
 LIBS = -lm -llevmar -lfaddeeva
 DEBUGFLAGS = -fno-omit-frame-pointer -g3
 SANITISERS = -fsanitize=undefined -fsanitize=address
@@ -23,9 +23,10 @@ perf:
 	$(CC) $(CFLAGS) $(DEBUGFLAGS) $(LIBS) CFG.cpp -o CFG
 	rm perf.data
 	perf record -g ./CFG >/dev/null
-	perf script | c++filt | gprof2dot -f perf | dot -Tpdf -o /tmp/cfg.pdf
-	mupdf /tmp/cfg.pdf
-	rm /tmp/cfg.pdf
+	#perf script | c++filt | gprof2dot -f perf | dot -Tpdf -o /tmp/cfg.pdf
+	#mupdf /tmp/cfg.pdf
+	#rm /tmp/cfg.pdf
+	perf report -g
 
 diff: all
 	./compare_outputs

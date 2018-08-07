@@ -196,15 +196,23 @@ int main() {
     optPrices.reserve(SPXprices.size() + VIXprices.size());
     optPrices.insert(optPrices.end(), SPXprices.begin(), SPXprices.end());
     optPrices.insert(optPrices.end(), VIXprices.begin(), VIXprices.end());
-
+    //double x[(int)optPrices.size()];
+    //double invNspx2root = 1/sqrt(2*(int)SPXprices.size());
+    //double invNvix2root = 1/sqrt(2*(int)VIXprices.size());
+    //for (int j = 0; j < (int)SPXprices.size(); j++){
+    //    x[j] = invNspx2root;
+    //}
+    //for (int k = (int)SPXprices.size(); k < (int)optPrices.size(); k++){
+    //    x[k] = invNvix2root;
+    //}
 
     mktPara marP = {S, r, SPXtarr, SPXkarr, VIXtarr, VIXkarr, optPrices, tbar};
     double p[5];
-    p[0] = 1.5000;
-    p[1] = 0.70000;
-    p[2] = 0.4000;
-    p[3] = -0.3000;
-    p[4] = 0.2000;
+    p[0] = 1.2000;
+    p[1] = 0.20000;
+    p[2] = 0.2000;
+    p[3] = -0.6000;
+    p[4] = 0.3000;
 
     double opts[LM_OPTS_SZ], info[LM_INFO_SZ];
     opts[0]=LM_INIT_MU;
@@ -220,6 +228,7 @@ int main() {
     std::cout << "\r Initial point:" << "\t"  << std::scientific << std::setprecision(8) << p[0]<< "\t" << p[1]<< "\t"<< p[2]<< "\t"<< p[3]<< "\t"<< p[4] << std::endl;
 
     double start_s = clock();
+    //dlevmar_der(objFunc, JacFunc, p, x, 5, (int)optPrices.size(), 100, opts, info, NULL, NULL, (void *) &marP);
     dlevmar_der(objFunc, JacFunc, p, NULL, 5, (int)optPrices.size(), 100, opts, info, NULL, NULL, (void *) &marP);
     double stop_s = clock();
 
@@ -276,9 +285,11 @@ void objFunc (double *p, double *x, int m, int n, void *data){
     double Nvix2root = sqrt(2*VIXprices.size());
     for (k = 0; k < (int)SPXprices.size(); k++){
         //x[k] = SPXprices[k];
+        //x[k] = (SPXprices[k])/(mktp->mktPrices[k]*Nspx2root);
         x[k] = (SPXprices[k] - mktp->mktPrices[k])/(mktp->mktPrices[k]*Nspx2root);
     }
     for (int j = k; j < n; j++) {
+        //x[j] = (VIXprices[j - k])/(mktp->mktPrices[j]*Nvix2root);
         x[j] = (VIXprices[j - k] - mktp->mktPrices[j])/(mktp->mktPrices[j]*Nvix2root);
     }
 }
