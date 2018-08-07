@@ -7,7 +7,16 @@
 #include <iostream>
 #include <vector>
 #include <Faddeeva.hh>
+#include <vdt/vdtMath.h>
 //#include <levmar/levmar.h>
+
+// Pade approximant
+#define FAST_EXP vdt::fast_exp
+#define FAST_LOG vdt::fast_log
+
+// Non-approximant
+//#define FAST_EXP exp
+//#define FAST_LOG log
 
 typedef std::vector<double> VD;
 //static VD x64 = {0.0243502926634244325089558, 0.0729931217877990394495429,
@@ -191,11 +200,11 @@ int main() {
 
     mktPara marP = {S, r, SPXtarr, SPXkarr, VIXtarr, VIXkarr, optPrices, tbar};
     double p[5];
-    p[0] = 1.2000;
-    p[1] = 0.20000;
-    p[2] = 0.2000;
-    p[3] = -0.6000;
-    p[4] = 0.3000;
+    p[0] = 1.5000;
+    p[1] = 0.70000;
+    p[2] = 0.4000;
+    p[3] = -0.3000;
+    p[4] = 0.2000;
 
     double opts[LM_OPTS_SZ], info[LM_INFO_SZ];
     opts[0]=LM_INIT_MU;
@@ -312,7 +321,7 @@ CFPriceData CFprice(CD u, modelPara p, double tau, double S, double r) {
     CD D = log(d / (p.v0 * A2)) + p.k * tau * 0.5;
     double tmp = p.k * p.vbar / p.sigma;
 
-    CD CF = exp(iu * (log(S) + r * tau) - tmp * p.rho * tau * iu - A +
+    CD CF = exp(iu * (FAST_LOG(S) + r * tau) - tmp * p.rho * tau * iu - A +
                 2 * tmp * D / p.sigma);
 
 
@@ -324,9 +333,9 @@ double SPXintegrand(double u, modelPara p, double tau, double K, double S,
                     double r) {
     CD iu = i * u;
     CD inputU = u - i * 0.5;
-    double x = log(S);
+    double x = FAST_LOG(S);
     double rT = r * tau;
-    double kappa = x - log(K) + rT;
+    double kappa = x - FAST_LOG(K) + rT;
     CD integrand1 = exp(iu * kappa - i * inputU * (x + rT));
     CFPriceData tmp = CFprice(inputU, p, tau, S, r);
     CD CFpri = tmp.CFPrice;
@@ -362,7 +371,7 @@ VD SPXprice(modelPara p, VD tau, double S, VD K, double r, int n) { //tau and K 
         }
 
         glInt = halfRange * glCollect;
-        SPXcall = S - sqrt(strike * S) * exp(-rT * 0.5) / pi * glInt;
+        SPXcall = S - sqrt(strike * S) * FAST_EXP(-rT * 0.5) / pi * glInt;
         SPXs.push_back(SPXcall);
     }
 
@@ -411,9 +420,9 @@ VD gradSPXintgrand(double u, modelPara p, double tau, double K, double S, double
     CD sigmaPar = (-A_sigma - 2.0*tmp1/p.sigma*CFP.D + tmp1/CFP.d*(d_sigma
         - dOverA2*A2_sigma) + tmpBase*p.vbar*p.rho/p.sigma) * CFP.CFPrice;
 
-    double x = log(S);
+    double x = FAST_LOG(S);
     double rT = r * tau;
-    double kappa = x - log(K) + rT;
+    double kappa = x - FAST_LOG(K) + rT;
     CD integrand1 = exp(i * u * kappa - i * inputU * (x + rT));
     double integrand2 = pow(u, 2) + 0.25;
 
@@ -456,7 +465,7 @@ VD gradientSPXprice(modelPara p, double S, double r, int n, VD tau, VD K){
         }
         for (int p = 0; p < 5; p++){
             glCollect[p] = glCollect[p]*halfRange;
-            gradSPX.push_back(- sqrt(strike * S) * exp(-rT * 0.5) / pi * glCollect[p]);
+            gradSPX.push_back(- sqrt(strike * S) * FAST_EXP(-rT * 0.5) / pi * glCollect[p]);
         }
     }
 
@@ -471,9 +480,9 @@ CFvolData CFvol(CD u, modelPara p, double tau) {
     CD iu = u * i;
     double ktauH = p.k*tau*0.5;
     CD G = cosh(ktauH) + (1.0 - var*iu/p.k)*sinh(ktauH);
-    CD F = p.v0*iu/G * exp(-ktauH);
+    CD F = p.v0*iu/G * FAST_EXP(-ktauH);
 
-    CD CF = pow(exp(ktauH)/G, 2*p.k*p.vbar/var) * exp(F);
+    CD CF = pow(FAST_EXP(ktauH)/G, 2*p.k*p.vbar/var) * exp(F);
     CFvolData ret = {CF, G, F};
 
     return ret;
@@ -483,7 +492,7 @@ intVIXdata VIXintegrand(CD u, modelPara p, double tau, double K, double tbar){
     CD iu = i * u;
     double k = p.k;
     double vbar = p.vbar;
-    double atauBar = (1.0 - exp(-tbar*k))/k;
+    double atauBar = (1.0 - FAST_EXP(-tbar*k))/k;
     CD inputU = -u * atauBar/tbar;
     double btauBar = vbar*(tbar - atauBar);
     CFvolData tmp = CFvol(inputU, p, tau);
@@ -542,7 +551,7 @@ VD gradVIXintegrand(CD u, modelPara p, double tau, double K, double tbar){
     double var = pow(p.sigma, 2);
     double tmp1 = 2.0*p.k/var;
     double tmp2 = p.k*tau*0.5;
-    double tmp3 = exp(tmp2);
+    double tmp3 = FAST_EXP(tmp2);
     CD tmp4 = pow(inter.G, 2);
     CD iU = i * inter.inputU;
     CD iuOverTbar = inter.iu/tbar;
@@ -684,4 +693,5 @@ void printIntegrandVIXoption(modelPara p, double tau, double K, double tbar, int
         std::cout << "VIXintegrand " << VIXint << std::endl;
     }
 }
+
 
