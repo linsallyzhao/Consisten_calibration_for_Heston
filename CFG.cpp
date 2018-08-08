@@ -8,7 +8,6 @@
 #include <vector>
 #include <Faddeeva.hh>
 #include <vdt/vdtMath.h>
-//#include <levmar/levmar.h>
 
 // Pade approximant
 #define FAST_EXP vdt::fast_exp
@@ -196,24 +195,6 @@ int main() {
     optPrices.reserve(SPXprices.size() + VIXprices.size());
     optPrices.insert(optPrices.end(), SPXprices.begin(), SPXprices.end());
     optPrices.insert(optPrices.end(), VIXprices.begin(), VIXprices.end());
-    //CONSISTENT OBJECTIVE FUNCTION 2
-    double x[(int)optPrices.size()];
-    double invNspx2root = 1/sqrt(2*(int)SPXprices.size());
-    double invNvix2root = 1/sqrt(2*(int)VIXprices.size());
-    for (int j = 0; j < (int)SPXprices.size(); j++){
-        x[j] = invNspx2root;
-    }
-    for (int k = (int)SPXprices.size(); k < (int)optPrices.size(); k++){
-        x[k] = invNvix2root;
-    }
-
-    //ONE MARKET OBJECTIVE FUNCTION 2
-    //double x[40];
-    //for (int j = 0; j < 40; j++){
-    //    x[j] = SPXprices[j];
-    //}
-
-
 
     mktPara marP = {S, r, SPXtarr, SPXkarr, VIXtarr, VIXkarr, optPrices, tbar};
     double p[5];
@@ -251,14 +232,7 @@ int main() {
     std::cout << "\r Initial point:" << "\t"  << std::scientific << std::setprecision(8) << p[0]<< "\t" << p[1]<< "\t"<< p[2]<< "\t"<< p[3]<< "\t"<< p[4] << std::endl;
 
     double start_s = clock();
-    //CONSISTENT OBJECTIVE FUNCTION 2
-    dlevmar_der(objFunc, JacFunc, p, x, 5, (int)optPrices.size(), 100, opts, info, NULL, NULL, (void *) &marP);
-    //CONSISTENT OBJECTIVE FUNCTION 1
-    //dlevmar_der(objFunc, JacFunc, p, NULL, 5, (int)optPrices.size(), 100, opts, info, NULL, NULL, (void *) &marP);
-    //ONE MARKET OBJECTIVE FUNCTION 1
-    //dlevmar_der(objFunc, JacFunc, p, NULL, 5, 40, 100, opts, info, NULL, NULL, (void *) &marP);
-    //ONE MARKET OBJECTIVE FUNCTION 2
-    //dlevmar_der(objFunc, JacFunc, p, x, 5, 40, 100, opts, info, NULL, NULL, (void *) &marP);
+    dlevmar_der(objFunc, JacFunc, p, NULL, 5, (int)optPrices.size(), 100, opts, info, NULL, NULL, (void *) &marP);
     double stop_s = clock();
 
     std::cout << "Optimum found:" << std::scientific << std::setprecision(8) << "\t"<< p[0]<< "\t" << p[1]<< "\t"<< p[2]<< "\t"<< p[3]<< "\t"<< p[4] << std::endl;
@@ -313,20 +287,10 @@ void objFunc (double *p, double *x, int m, int n, void *data){
     double Nspx2root = sqrt(2*SPXprices.size());
     double Nvix2root = sqrt(2*VIXprices.size());
     for (k = 0; k < (int)SPXprices.size(); k++){
-        //ONE MARKET OBJECTIVE FUNCTION 1
-        //x[k] = SPXprices[k] - mktp->mktPrices[k];
-        //ONE MARKET OBJECTIVE FUNCTION 2
-        //x[k] = SPXprices[k];
-        //CONSISTENT OBJECTIVE FUNCTION 2
-        x[k] = (SPXprices[k])/(mktp->mktPrices[k]*Nspx2root);
-        //CONSISTENT OBJECTIVE FUNCTION 1
-        //x[k] = (SPXprices[k] - mktp->mktPrices[k])/(mktp->mktPrices[k]*Nspx2root);
+        x[k] = (SPXprices[k] - mktp->mktPrices[k])/(mktp->mktPrices[k]*Nspx2root);
     }
     for (int j = k; j < n; j++) {
-        //CONSISTENT OBJECTIVE FUNCTION 2
-        x[j] = (VIXprices[j - k])/(mktp->mktPrices[j]*Nvix2root);
-        //CONSISTENT OBJECTIVE FUNCTION 1
-        //x[j] = (VIXprices[j - k] - mktp->mktPrices[j])/(mktp->mktPrices[j]*Nvix2root);
+        x[j] = (VIXprices[j - k] - mktp->mktPrices[j])/(mktp->mktPrices[j]*Nvix2root);
     }
 }
 
@@ -342,18 +306,11 @@ void JacFunc (double *p, double *jac, int m, int n, void *data){
     int k;
     for (k = 0; k < (int)mktp->SPX_T.size(); k++){
         for (int j = 0; j < m; j++){
-            //ONE MARKET OBJECTIVE FUNCTION 1
-            //ONE MARKET OBJECTIVE FUNCTION 2
-            //jac[k*m+j] = SPXjac[k*m+j];
-            //CONSISTENT OBJECTIVE FUNCTION 1
-            //CONSISTENT OBJECTIVE FUNCTION 2
             jac[k*m+j] = SPXjac[k*m+j]/(mktp->mktPrices[k]*Nspx2root);
         }
     }
     for (int l = k; l < n; l++){
         for (int j = 0; j < m; j++){
-            //CONSISTENT OBJECTIVE FUNCTION 1
-            //CONSISTENT OBJECTIVE FUNCTION 2
             jac[l*m+j] = VIXjac[(l-k)*m+j]/(mktp->mktPrices[l]*Nvix2root);
         }
     }
