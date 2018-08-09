@@ -154,16 +154,14 @@ void printSPXgradient(modelPara p, double S, double r, int n, VD tau, VD K);
 void printVIXgradient(modelPara p, double tbar, double r, int n, VD tau, VD K);
 
 int main() {
-    double allT[] = {0.0,        0.01917808, 0.03835616, 0.05753425,
-                     0.08219178, 0.10136986, 0.12054795, 0.13972603,
-                     0.16438356, 0.24657534, 0.32876712, 0.4109589,
-                     0.49315068, 0.73972603, 0.98630137};
+    VD allT = {0.0,        0.01917808, 0.03835616, 0.05753425, 0.08219178,
+               0.10136986, 0.12054795, 0.13972603, 0.16438356, 0.24657534,
+               0.32876712, 0.4109589,  0.49315068, 0.73972603, 0.98630137};
 
     // These are uniform random (0, 1.4) generated
-    double disInitial[] = {0.91840917, 0.50851988, 0.25907174, 0.85560232,
-                           0.53713517, 0.02042697, 0.54469571, 0.89533401,
-                           0.96375783, 0.83626845, 0.93122131, 1.36544665,
-                           0.90517004, 0.98858194};
+    VD disInitial = {0.91840917, 0.50851988, 0.25907174, 0.85560232, 0.53713517,
+                     0.02042697, 0.54469571, 0.89533401, 0.96375783, 0.83626845,
+                     0.93122131, 1.36544665, 0.90517004, 0.98858194};
     // double disInitial[] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
     //                        0.0, 0.0, 0.0, 0.0};
     std::vector<intI> disArr;
@@ -290,8 +288,9 @@ int main() {
     // opts, info, NULL, NULL, (void *) &marP); double stop_s = clock();
 
     // std::cout << "Optimum found:" << std::scientific << std::setprecision(8)
-    // << "\t"<< p[0]<< "\t" << p[1]<< "\t"<< p[2]<< "\t"<< p[3]<< "\t"<< p[4] <<
-    // std::endl; std::cout << "Real optimum:" << "\t" << mp.k<<"\t"<< mp.vbar<<
+    // << "\t"<< p[0]<< "\t" << p[1]<< "\t"<< p[2]<< "\t"<< p[3]<< "\t"<< p[4]
+    // << std::endl; std::cout << "Real optimum:" << "\t" << mp.k<<"\t"<<
+    // mp.vbar<<
     // "\t"<< mp.v0<< "\t"<< mp.rho<< "\t"<< mp.sigma << std::endl;
 
     // if (int(info[6]) == 6) {
@@ -627,7 +626,8 @@ intVIXdata VIXintegrand(CD u, modelPara p, double tau, double K, double tbar) {
     do {
         Iphi += p.disArr.at(count).inte;
         count++;
-    } while (p.disArr.at(count).end <= (tau + 30.0 / 365 + 0.00001) && count < 13);
+    } while (p.disArr.at(count).end <= (tau + 30.0 / 365 + 0.00001) &&
+             count < 13);
     int end_count = count - 1;
 
     CD part1 = exp(-iu * (btauBar + Iphi) / tbar);
