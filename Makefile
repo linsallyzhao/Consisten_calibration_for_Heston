@@ -1,10 +1,10 @@
 CC = g++
-CFLAGS = -Wall -Wextra -Wno-unused-parameter -Werror -O2 -flto -march=native -mtune=native
+CFLAGS = -Wall -Wextra -Wno-unused-parameter  -O2 -flto -march=native -mtune=native
 LIBS = -lm -llevmar -lfaddeeva
 DEBUGFLAGS = -fno-omit-frame-pointer -g3
 SANITISERS = -fsanitize=undefined -fsanitize=address
 
-all: HC CFG
+all: HC CFG DIS
 
 HC: HC.cpp
 	$(CC) $(CFLAGS) $(LIBS) -fprofile-generate HC.cpp -o HC
@@ -15,6 +15,11 @@ CFG: CFG.cpp
 	$(CC) $(CFLAGS) $(LIBS) -fprofile-generate CFG.cpp -o CFG
 	./CFG >/dev/null
 	$(CC) $(CFLAGS) $(LIBS) -fprofile-use CFG.cpp -o CFG
+
+DIS: DIS.cpp
+	$(CC) $(CFLAGS) $(LIBS) -fprofile-generate DIS.cpp -o DIS
+	./DIS >/dev/null
+	$(CC) $(CFLAGS) $(LIBS) -fprofile-use DIS.cpp -o DIS
 
 clean:
 	rm -f *~ *.o HC CFG perf.diff
@@ -32,6 +37,6 @@ diff: all
 	./compare_outputs
 
 sanitise:
-	$(CC) $(CFLAGS) $(DEBUGFLAGS) $(SANITISERS) $(LIBS) -fprofile-generate CFG.cpp -o CFG
-	./CFG >/dev/null
-	$(CC) $(CFLAGS) $(DEBUGFLAGS) $(SANITISERS) $(LIBS) -fprofile-use CFG.cpp -o CFG
+	$(CC) $(CFLAGS) $(DEBUGFLAGS) $(SANITISERS) $(LIBS) -fprofile-generate DIS.cpp -o DIS
+	./DIS >/dev/null
+	$(CC) $(CFLAGS) $(DEBUGFLAGS) $(SANITISERS) $(LIBS) -fprofile-use DIS.cpp -o DIS
