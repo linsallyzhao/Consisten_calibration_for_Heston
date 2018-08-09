@@ -167,8 +167,7 @@ int main() {
     std::vector<intI> disArr;
 
     for (int j = 0; j < 14; j++) {
-        intI tmp = {allT[j], allT[j + 1], disInitial[j]};
-        disArr.push_back(tmp);
+        disArr.push_back({allT[j], allT[j + 1], disInitial[j]});
     }
 
     modelPara mp = {3.0, 0.1, 0.08, -0.8, 0.25, disArr};
