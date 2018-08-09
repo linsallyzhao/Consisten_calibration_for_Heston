@@ -28,10 +28,10 @@ perf:
 	$(CC) $(CFLAGS) $(DEBUGFLAGS) $(LIBS) DIS.cpp -o DIS
 	rm perf.data
 	perf record -g ./DIS >/dev/null
-	#perf script | c++filt | gprof2dot -f perf | dot -Tpdf -o /tmp/cfg.pdf
-	#mupdf /tmp/cfg.pdf
-	#rm /tmp/cfg.pdf
-	perf report -g
+	perf script | c++filt | gprof2dot -f perf | dot -Tpdf -o /tmp/cfg.pdf
+	mupdf /tmp/cfg.pdf
+	rm /tmp/cfg.pdf
+	#perf report -g
 
 diff: all
 	./compare_outputs

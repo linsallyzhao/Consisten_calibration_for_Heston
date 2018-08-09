@@ -124,7 +124,7 @@ struct modelPara {
     double v0;
     double rho;
     double sigma;
-    intI disArr[14];
+    std::vector<intI> disArr;
 };
 
 CFPriceData CFprice(CD u, modelPara p, double tau, double S, double r);
@@ -166,13 +166,14 @@ int main() {
                            0.90517004, 0.98858194};
     // double disInitial[] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
     //                        0.0, 0.0, 0.0, 0.0};
+    std::vector<intI> disArr;
 
-    modelPara mp = {3.0, 0.1, 0.08, -0.8, 0.25};
     for (int j = 0; j < 14; j++) {
-        mp.disArr[j].start = allT[j];
-        mp.disArr[j].end = allT[j + 1];
-        mp.disArr[j].inte = disInitial[j];
+        intI tmp = {allT[j], allT[j + 1], disInitial[j]};
+        disArr.push_back(tmp);
     }
+
+    modelPara mp = {3.0, 0.1, 0.08, -0.8, 0.25, disArr};
     double S = 1.0;
     double r = 0.02;
     double tbar = 30 / 365.0;
@@ -347,7 +348,7 @@ void objFunc(double *p, double *x, int m, int n, void *data) {
     mktPara *mktp;
     mktp = (struct mktPara *)data;
 
-    modelPara molp = {p[0], p[1], p[2], p[3], p[4]};
+    modelPara molp = {p[0], p[1], p[2], p[3], p[4], {}};
     VD SPXprices = SPXprice(molp, mktp->SPX_T, mktp->S, mktp->SPX_K, mktp->r,
                             (int)mktp->SPX_T.size());
     VD VIXprices = VIXprice(molp, mktp->VIX_T, mktp->S, mktp->VIX_K, mktp->r,
@@ -368,7 +369,7 @@ void JacFunc(double *p, double *jac, int m, int n, void *data) {
     mktPara *mktp;
     mktp = (struct mktPara *)data;
 
-    modelPara molp = {p[0], p[1], p[2], p[3], p[4]};
+    modelPara molp = {p[0], p[1], p[2], p[3], p[4], {}};
     VD SPXjac =
         gradientSPXprice(molp, mktp->S, mktp->r, (int)mktp->SPX_T.size(),
                          mktp->SPX_T, mktp->SPX_K);
@@ -423,9 +424,9 @@ double SPXintegrand(double u, modelPara p, double tau, double K, double S,
     double Iphi = 0.0;
     int count = 0;
     do {
-        Iphi += p.disArr[count].inte;
+        Iphi += p.disArr.at(count).inte;
         count++;
-    } while (count < 14 && p.disArr[count].end <= tau);
+    } while (count < 14 && p.disArr.at(count).end <= tau);
 
     CD integrand1 = exp(iu * kappa - i * inputU * (x + rT));
     CFPriceData tmp = CFprice(inputU, p, tau, S, r);
@@ -533,9 +534,9 @@ VD gradSPXintgrand(double u, modelPara p, double tau, double K, double S,
     double Iphi = 0.0;
     int count = 0;
     do {
-        Iphi += p.disArr[count].inte;
+        Iphi += p.disArr.at(count).inte;
         count++;
-    } while (count < 14 && p.disArr[count].end <= tau);
+    } while (count < 14 && p.disArr.at(count).end <= tau);
     double integrand3 = exp(-integrand2 * Iphi);
 
     gradSPXint.push_back(real(integrand1 * kPar) * integrand3 / integrand2);
@@ -619,14 +620,14 @@ intVIXdata VIXintegrand(CD u, modelPara p, double tau, double K, double tbar) {
     CD CFvola = tmp.CFvol;
     double Iphi = 0.0;
     int count = 0;
-    while (p.disArr[count].start < tau && count < 13) {
+    while (p.disArr.at(count).start < tau && count < 13) {
         count++;
     }
     int start_count = count;
     do {
-        Iphi += p.disArr[count].inte;
+        Iphi += p.disArr.at(count).inte;
         count++;
-    } while (p.disArr[count].end <= (tau + 30.0 / 365 + 0.00001) && count < 13);
+    } while (p.disArr.at(count).end <= (tau + 30.0 / 365 + 0.00001) && count < 13);
     int end_count = count - 1;
 
     CD part1 = exp(-iu * (btauBar + Iphi) / tbar);
