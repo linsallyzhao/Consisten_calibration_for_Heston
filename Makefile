@@ -2,7 +2,7 @@ CC = g++
 CFLAGS = -Wall -Wextra -Wno-unused-parameter  -O2 -flto -march=native -mtune=native
 LIBS = -lm -llevmar -lfaddeeva
 DEBUGFLAGS = -fno-omit-frame-pointer -g3
-SANITISERS = -fsanitize=undefined -fsanitize=address
+SANITISERS = -fsanitize=undefined -fsanitize=address -fsanitize=pointer-subtract -fsanitize=pointer-compare
 
 all: HC CFG DIS
 
@@ -22,12 +22,12 @@ DIS: DIS.cpp
 	$(CC) $(CFLAGS) $(LIBS) -fprofile-use DIS.cpp -o DIS
 
 clean:
-	rm -f *~ *.o HC CFG perf.diff
+	rm -f *~ *.o HC CFG DIS perf.diff
 
 perf:
-	$(CC) $(CFLAGS) $(DEBUGFLAGS) $(LIBS) CFG.cpp -o CFG
+	$(CC) $(CFLAGS) $(DEBUGFLAGS) $(LIBS) DIS.cpp -o DIS
 	rm perf.data
-	perf record -g ./CFG >/dev/null
+	perf record -g ./DIS >/dev/null
 	#perf script | c++filt | gprof2dot -f perf | dot -Tpdf -o /tmp/cfg.pdf
 	#mupdf /tmp/cfg.pdf
 	#rm /tmp/cfg.pdf
