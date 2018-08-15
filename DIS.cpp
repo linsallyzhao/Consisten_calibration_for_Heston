@@ -159,15 +159,11 @@ int main() {
                0.32876712, 0.4109589,  0.49315068, 0.73972603, 0.98630137};
 
     // These are uniform random (0, 1.4) generated
-    //VD disStar = {0.91840917, 0.50851988, 0.25907174, 0.85560232, 0.53713517,
-    //                 0.02042697, 0.54469571, 0.89533401, 0.96375783, 0.83626845,
-    //                 0.93122131, 1.36544665, 0.90517004, 0.98858194};
+    VD disStar = {1.46371706e-04, 4.31183274e-04, 7.89958945e-04, 2.91974407e-04,
+       8.57045896e-05, 5.48371267e-04, 4.84620007e-04, 3.51856480e-04,
+       7.00281831e-04, 7.14263885e-04, 7.51713276e-04, 6.58928904e-04,
+       4.95814626e-04, 6.67154021e-04};
 
-    //VD disStar = {0.00987051, 0.00333817, 0.00555787, 0.00784449, 0.00276015,
-    //   0.00306276, 0.00481648, 0.00486013, 0.00202789, 0.00214666,
-    //   0.00948276, 0.00114196, 0.00078043, 0.00188494};
-    VD disStar = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-                           0.0, 0.0, 0.0, 0.0};
     std::vector<intI> disArr;
 
     for (int j = 0; j < 14; j++) {
@@ -224,27 +220,25 @@ int main() {
     optPrices.insert(optPrices.end(), SPXprices.begin(), SPXprices.end());
     optPrices.insert(optPrices.end(), VIXprices.begin(), VIXprices.end());
 
-    //std::vector<intI> toCali;
+    std::vector<intI> toCali;
 
-    //for (int j = 0; j < 14; j++) {
-    //    toCali.push_back({allT[j], allT[j + 1], 0.0});
-    //}
-    //mktPara marP = {S, r, SPXtarr, SPXkarr, VIXtarr, VIXkarr, optPrices,
-    //tbar, toCali};
+    for (int j = 0; j < 14; j++) {
+        toCali.push_back({allT[j], allT[j + 1], 0.0});
+    }
     mktPara marP = {S, r, SPXtarr, SPXkarr, VIXtarr, VIXkarr, optPrices,
-    tbar, disArr};
+    tbar, toCali};
+    //mktPara marP = {S, r, SPXtarr, SPXkarr, VIXtarr, VIXkarr, optPrices,
+    //tbar, disArr};
 
 
-    double p[5];
+    VD disInitial = {5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0};
+    double p[19];
     // Initial 1
     //p[0] = 1.2000;
     //p[1] = 0.20000;
     //p[2] = 0.2000;
     //p[3] = -0.6000;
     //p[4] = 0.3000;
-    //for(int fill = 0; fill < 14; fill++){
-    //    p[fill+5] = disInitial[fill];
-    //}
 
     // Initial 2
     //p[0] = 1.2000;
@@ -259,8 +253,12 @@ int main() {
     p[2] = 0.4000;
     p[3] = -0.7000;
     p[4] = 0.2000;
+    for(int fill = 0; fill < 14; fill++){
+        p[fill+5] = disInitial[fill] * 0.0001;
+    }
+
     double opts[LM_OPTS_SZ], info[LM_INFO_SZ];
-    opts[0] = LM_INIT_MU;
+    opts[0] = LM_INIT_MU * 100;
     // stopping thresholds for
     opts[1] = 1E-10;          // ||J^T e||_inf
     opts[2] = 1E-300;          // ||Dp||_2
@@ -269,23 +267,41 @@ int main() {
 
     std::cout <<
     "\r-------- -------- -------- Heston Model Calibrator-------- -------- --------"
-    <<std::endl; std::cout <<
+    <<std::endl;
+    
+    std::cout <<
     "Parameters:" << "\t      kappa"<<"\t     vinf"<< "\t       v0"<<"\t      rho"
-    <<"\t       vov" <<std::endl; std::cout << "\r Initial point:" << "\t"  << std::scientific
+    <<"\t       vov"<<"\t       I1"<< "\t       I2"<< "\t       I3"<< "\t       I4"
+    <<"\t       I5"<<"\t       I6"<<"\t       I7"<<"\t       I8"<<"\t       I9"
+    <<"\t       I10"<<"\t       I11"<<"\t       I12"<<"\t       I13"<<"\t       I14"
+    <<std::endl;
+
+    std::cout << "\r Initial point:" << "\t"  << std::scientific
     << std::setprecision(8) << p[0]<< "\t" << p[1]<< "\t"<< p[2]<< "\t"<< p[3]
-    << "\t"<< p[4] << std::endl;
+    << "\t"<< p[4] << "\t" << p[5]<< "\t" << p[6]<< "\t"<< p[7]<< "\t"<< p[8]
+    << "\t"<< p[9] << "\t" << p[10]<< "\t" << p[11]<< "\t"<< p[12]<< "\t"<< p[13]
+    << "\t"<< p[14] << "\t" << p[15]<< "\t" << p[16]<< "\t"<< p[17]<< "\t"<< p[18]
+    << std::endl;
 
     double start_s = clock();
-    dlevmar_der(objFunc, JacFunc, p, NULL, 5, (int)optPrices.size(), 150,
+    dlevmar_der(objFunc, JacFunc, p, NULL, 19, (int)optPrices.size(), 30000,
     opts, info, NULL, NULL, (void *) &marP);
     double stop_s = clock();
 
     std::cout << "Optimum found:" << std::scientific << std::setprecision(8)
     << "\t"<< p[0]<< "\t" << p[1]<< "\t"<< p[2]<< "\t"<< p[3]<< "\t"<< p[4]
+    << "\t" << p[5]<< "\t" << p[6]<< "\t"<< p[7]<< "\t"<< p[8]
+    << "\t"<< p[9] << "\t" << p[10]<< "\t" << p[11]<< "\t"<< p[12]<< "\t"<< p[13]
+    << "\t"<< p[14] << "\t" << p[15]<< "\t" << p[16]<< "\t"<< p[17]<< "\t"<< p[18]
     << std::endl;
 
     std::cout << "Real optimum:" << "\t" << mp.k<<"\t"<< mp.vbar
-    << "\t"<< mp.v0<< "\t"<< mp.rho<< "\t"<< mp.sigma << std::endl;
+    << "\t"<< mp.v0<< "\t"<< mp.rho<< "\t"<< mp.sigma << disStar[0]
+    << "\t"<< disStar[1]<< "\t"<< disStar[2]<< "\t"<< disStar[3]
+    << "\t"<< disStar[4]<< "\t"<< disStar[5]<< "\t"<< disStar[6]
+    << "\t"<< disStar[7]<< "\t"<< disStar[8]<< "\t"<< disStar[9]
+    << "\t"<< disStar[10]<< "\t"<< disStar[11]<< "\t"<< disStar[12]
+    << "\t"<< disStar[13] << std::endl;
 
 
     if (int(info[6]) == 6) {
@@ -352,8 +368,11 @@ void objFunc(double *p, double *x, int m, int n, void *data) {
     mktp = (struct mktPara *)data;
     std::vector<intI> toCali = mktp->toCali;
 
-    //for(int count = 0; count < 14; count++){
-    //    toCali[count].inte = p[count+5];
+    for(int count = 0; count < 14; count++){
+        toCali[count].inte = p[count+5];
+    }
+    //for(int print = 0; print < 14; print++){
+    //    std::cout << "In objFunc " << print << " " << toCali[print].inte << std::endl;
     //}
     modelPara molp = {p[0], p[1], p[2], p[3], p[4], toCali};
     VD SPXprices = SPXprice(molp, mktp->SPX_T, mktp->S, mktp->SPX_K, mktp->r,
@@ -377,8 +396,11 @@ void JacFunc(double *p, double *jac, int m, int n, void *data) {
     mktp = (struct mktPara *)data;
     std::vector<intI> toCali = mktp->toCali;
 
-    //for(int count = 0; count < 14; count++){
-    //    toCali[count].inte = p[count+5];
+    for(int count = 0; count < 14; count++){
+        toCali[count].inte = p[count+5];
+    }
+    //for(int print = 0; print < 14; print++){
+    //    std::cout << "In JacFunc " << print << " " << toCali[print].inte << std::endl;
     //}
     modelPara molp = {p[0], p[1], p[2], p[3], p[4], toCali};
 
@@ -557,16 +579,16 @@ VD gradSPXintgrand(double u, modelPara p, double tau, double K, double S,
     gradSPXint.push_back(real(integrand1 * rhoPar) * integrand3 / integrand2);
     gradSPXint.push_back(real(integrand1 * sigmaPar) * integrand3 / integrand2);
 
-    //double IphiDer = -real(integrand1 * CFP.CFPrice) * integrand3;
-    //for (int new_count = 0; new_count < count; new_count++) {
-    //    gradSPXint.push_back(IphiDer);
-    //}
-    //int to_fill = 19 - (int)gradSPXint.size();
-    //if (to_fill > 0) {  // this is test necessary
-    //    for (int fill = 0; fill < to_fill; fill++) {
-    //        gradSPXint.push_back(0.0);
-    //    }
-    //}
+    double IphiDer = -real(integrand1 * CFP.CFPrice) * integrand3;
+    for (int new_count = 0; new_count < count; new_count++) {
+        gradSPXint.push_back(IphiDer);
+    }
+    int to_fill = 19 - (int)gradSPXint.size();
+    if (to_fill > 0) {  // this is test necessary
+        for (int fill = 0; fill < to_fill; fill++) {
+            gradSPXint.push_back(0.0);
+        }
+    }
 
     return gradSPXint;
 }
@@ -577,15 +599,15 @@ VD gradientSPXprice(modelPara p, double S, double r, int n, VD tau, VD K) {
     VD w = *gl.weights;
 
     VD gradSPX, upInt, downInt, glCollect;
-    gradSPX.reserve(5 * n);
-    glCollect.reserve(5);
+    gradSPX.reserve(19 * n);
+    glCollect.reserve(19);
 
     double strike, T, rT, up_u, down_u;
     for (int l = 0; l < n; l++) {
         strike = K[l];
         T = tau[l];
         rT = r * T;
-        for (int cc = 0; cc < 5; cc++) {
+        for (int cc = 0; cc < 19; cc++) {
             glCollect[cc] = 0.0;
         }  // There must be a better way
         for (int count = 0; count < nGrid; count++) {
@@ -593,10 +615,10 @@ VD gradientSPXprice(modelPara p, double S, double r, int n, VD tau, VD K) {
             down_u = mid - u[count] * halfRange;
             upInt = gradSPXintgrand(up_u, p, T, strike, S, r);
             downInt = gradSPXintgrand(down_u, p, T, strike, S, r);
-            for (int j = 0; j < 5; j++)
+            for (int j = 0; j < 19; j++)
                 glCollect[j] += w[count] * (upInt[j] + downInt[j]);
         }
-        for (int p = 0; p < 5; p++) {
+        for (int p = 0; p < 19; p++) {
             glCollect[p] = glCollect[p] * halfRange;
             gradSPX.push_back(-sqrt(strike * S) * FAST_EXP(-rT * 0.5) / pi *
                               glCollect[p]);
@@ -746,17 +768,17 @@ VD gradVIXintegrand(CD u, modelPara p, double tau, double K, double tbar) {
     ret.push_back(0.0);
     ret.push_back(real(h_sigma * inter.rawVIXint));
 
-    //int count;
-    //for (count = 0; count < inter.start; count++) {
-    //    ret.push_back(0.0);
-    //}
+    int count;
+    for (count = 0; count < inter.start; count++) {
+        ret.push_back(0.0);
+    }
 
-    //for (count = inter.start; count <= inter.end; count++) {
-    //    ret.push_back(IphiDer);
-    //}
-    //for (count = inter.end; count < 14; count++) {
-    //    ret.push_back(0.0);
-    //}
+    for (count = inter.start; count <= inter.end; count++) {
+        ret.push_back(IphiDer);
+    }
+    for (count = inter.end; count < 14; count++) {
+        ret.push_back(0.0);
+    }
 
     return ret;
 }
@@ -767,8 +789,8 @@ VD gradientVIXprice(modelPara p, double r, int n, VD tau, VD K, double tbar) {
     VD w = *gl.weights;
 
     VD gradVIX, upInt, downInt, glCollect;
-    gradVIX.reserve(5 * n);
-    glCollect.reserve(5);
+    gradVIX.reserve(19 * n);
+    glCollect.reserve(19);
 
     double strike, T, discount, up_u, down_u;
     double fixedPart = 50 / sqrt(pi);
@@ -776,16 +798,16 @@ VD gradientVIXprice(modelPara p, double r, int n, VD tau, VD K, double tbar) {
         strike = K[l];
         T = tau[l];
         discount = exp(-r * T);
-        for (int cc = 0; cc < 5; cc++) glCollect[cc] = 0.0;
+        for (int cc = 0; cc < 19; cc++) glCollect[cc] = 0.0;
         for (int count = 0; count < nGrid; count++) {
             up_u = mid + u[count] * halfRange;
             down_u = mid - u[count] * halfRange;
             upInt = gradVIXintegrand(up_u + i, p, T, strike, tbar);
             downInt = gradVIXintegrand(down_u + i, p, T, strike, tbar);
-            for (int j = 0; j < 5; j++)
+            for (int j = 0; j < 19; j++)
                 glCollect[j] = w[count] * (upInt[j] + downInt[j]);
         }
-        for (int p = 0; p < 5; p++) {
+        for (int p = 0; p < 19; p++) {
             glCollect[p] = glCollect[p] * halfRange;
             gradVIX.push_back(fixedPart * discount * glCollect[p]);
         }
