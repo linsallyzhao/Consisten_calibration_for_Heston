@@ -264,21 +264,29 @@ int main() {
     // just a normalization anyway.
 
     std::ofstream output;
-    output.open("HestonCalibration");
+    //output.open("HestonCalibration");
+    output.open("test");
     output << std::setprecision(16) << std::scientific;
-    output << "Ik, Ivbar, Iv0, Irho, Isigma, Ok, Rk, Ovbar, Rvbar, Ov0, Rv0, Orho, Rrho, Osigma, Rsigma, stopped_by, time, iteration, pv, jac, lin_sys, e0, e*, Je, Dp" << std::endl;
+    output << "Ik,Ivbar,Iv0,Irho,Isigma,Ok,Rk,Ovbar,Rvbar,Ov0,Rv0,Orho,Rrho,Osigma,Rsigma,stopped_by,time,iteration,pv,jac,lin_sys,e0,e*,Je,Dp,count"<< std::endl;
 
 
     std::default_random_engine generator;
     std::uniform_real_distribution<double> distri(0.0, 1.0);
 
-    for(int nTest = 0; nTest < 10000; nTest++){
-        double k = distri(generator) * 4.5 + 0.5;
-        double vbar = distri(generator) * 0.9 + 0.05;
-        double v0 = distri(generator) * 0.9 + 0.05;
-        double rho = distri(generator) * (-0.8) - 0.1;
-        double sigma = distri(generator) * 0.9 + 0.05;
 
+    for(int nTest = 0; nTest < 1; nTest++){
+        //double k = distri(generator) * 4.5 + 0.5;
+        //double vbar = distri(generator) * 0.9 + 0.05;
+        //double v0 = distri(generator) * 0.9 + 0.05;
+        //double rho = distri(generator) * (-0.8) - 0.1;
+        //double sigma = distri(generator) * 0.9 + 0.05;
+
+
+        double k = 4.4854176701331436e+00;
+        double vbar = 1.9597869649292610e-01;
+        double v0 = 3.7880512570103980e-01;
+        double rho = -2.0808749441924546e-01;
+        double sigma = 4.5977655580471777e-01;
 
         modelPara mp = {k, vbar, v0, rho, sigma};
 
@@ -291,11 +299,6 @@ int main() {
 
         mktPara marP = {S, r, SPXtarr, SPXkarr, VIXtarr, VIXkarr, optPrices, tbar};
         double p[5];
-        p[0] = distri(generator) * 4.5 + 0.5;
-        p[1] = distri(generator) * 0.9 + 0.05;
-        p[2] = distri(generator) * 0.9 + 0.05;
-        p[3] = distri(generator) * (-0.8) - 0.1;
-        p[4] = distri(generator) * 0.9 + 0.05;
         double opts[LM_OPTS_SZ], info[LM_INFO_SZ];
         opts[0] = LM_INIT_MU;
         // stopping thresholds for
@@ -303,21 +306,45 @@ int main() {
         opts[2] = 1E-10;          // ||Dp||_2
         opts[3] = 1E-10;          // ||e||_2
         opts[4] = LM_DIFF_DELTA;  // finite difference if used
-
-        output << p[0] << ", " << p[1] << ", " << p[2] << ", " << p[3] << ", " << p[4] << ", ";
+        int count = 0;
+        double Ik, Ivbar, Iv0, Irho, Isigma;
         double start_s = clock();
-        dlevmar_der(objFunc, JacFunc, p, NULL, 5, (int)optPrices.size(), 100, opts,
-                    info, NULL, NULL, (void *)&marP);
+        do{
+            //p[0] = distri(generator) * 4.5 + 0.5;
+            //p[1] = distri(generator) * 0.9 + 0.05;
+            //p[2] = distri(generator) * 0.9 + 0.05;
+            //p[3] = distri(generator) * (-0.8) - 0.1;
+            //p[4] = distri(generator) * 0.9 + 0.05;
+
+            p[0] = 	2.535351;
+            p[1] = 0.888507;
+            p[2] = 0.243724;
+            p[3] = -0.827138;
+            p[4] = 0.824774;
+
+
+            Ik = p[0];
+            Ivbar = p[1];
+            Iv0 = p[2];
+            Irho = p[3];
+            Isigma = p[4];
+
+            dlevmar_der(objFunc, JacFunc, p, NULL, 5, (int)optPrices.size(), 100, opts,
+                        info, NULL, NULL, (void *)&marP);
+            count++;
+        }while(int(info[6]) == 2 && count < 20);
         double stop_s = clock();
 
-        output << p[0] << ", " << k << ", " << p[1] << ", " << vbar << ", "
+        std::cout << Ik << ", " << Ivbar << ", " << Iv0 << ", " << Irho << ", " << Isigma << ", ";
+        std::cout << p[0] << ", " << k << ", " << p[1] << ", " << vbar << ", "
                << p[2] << ", " << v0 << ", " << p[3] << ", " << rho << ", "
                << p[4] << ", " << sigma << ", ";
-        output << int(info[6]) << ", ";
-        output << double(stop_s - start_s) / CLOCKS_PER_SEC << ", ";
-        output << int(info[5]) << ", " << int(info[7]) << ", " << int(info[8]) << ", "
-            << int(info[9]) << ", ";
-        output << info[0] << ", " << info[1] << ", " << info[2] << ", " << info[3] << std::endl;
+        std::cout << int(info[6]) << ", ";
+        std::cout << double(stop_s - start_s) / CLOCKS_PER_SEC << ", ";
+        std::cout << int(info[5]) << ", " << int(info[7]) << ", " << int(info[8]) << ", "
+               << int(info[9]) << ", ";
+        std::cout << info[0] << ", " << info[1] << ", " << info[2] << ", " << info[3] << ", "
+               << count << std::endl;
     }
 
     //showSPXcallPrices(mp, SPXtarr, S, SPXkarr, r, (int)SPXkarr.size());
@@ -345,10 +372,13 @@ void objFunc(double *p, double *x, int m, int n, void *data) {
     for (k = 0; k < (int)SPXprices.size(); k++) {
         x[k] = (SPXprices[k] - mktp->mktPrices[k]) /
                (mktp->mktPrices[k] * Nspx2root);
+        std::cout << "objFunc_" << k << "   " << x[k] << std::endl;
     }
     for (int j = k; j < n; j++) {
         x[j] = (VIXprices[j - k] - mktp->mktPrices[j]) /
                (mktp->mktPrices[j] * Nvix2root);
+        std::cout << "objFunc_" << j << "   " << x[j] << std::endl;
+
     }
 }
 
