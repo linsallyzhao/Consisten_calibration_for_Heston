@@ -666,7 +666,7 @@ intVIXdata VIXintegrand(CD u, modelPara p, double tau, double K, double tbar) {
     int end_count = count - 1;
 
     CD part1 = exp(-iu * (btauBar + Iphi) / tbar);
-    CD part2 = 1.0 - Faddeeva::erf(K / 100.0 * sqrt(-iu));
+    CD part2 = 1.0 - Faddeeva::erf(K * sqrt(-iu));
     CD part3 = pow(-iu, 3 / 2.0);
     CD rawInt = CFvola * part1 * part2 / part3;
 
@@ -712,7 +712,7 @@ VD VIXprice(modelPara p, VD tau, double tbar, VD K, double r, int n) {
         }
 
         glInt = halfRange * glCollect;
-        VIXcall = 50.0 * discount / sqrt(pi) * glInt;
+        VIXcall = 0.5 * discount / sqrt(pi) * glInt;
         VIXs.push_back(VIXcall);
     }
     return VIXs;
@@ -793,7 +793,7 @@ VD gradientVIXprice(modelPara p, double r, int n, VD tau, VD K, double tbar) {
     glCollect.reserve(19);
 
     double strike, T, discount, up_u, down_u;
-    double fixedPart = 50 / sqrt(pi);
+    double fixedPart = 0.5 / sqrt(pi);
     for (int l = 0; l < n; l++) {
         strike = K[l];
         T = tau[l];
