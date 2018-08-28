@@ -9,14 +9,14 @@
 #include <iostream>
 #include <vector>
 #include <random>
-
+#include <assert.h>
 // Pade approximant
-#define FAST_EXP vdt::fast_exp
-#define FAST_LOG vdt::fast_log
+//#define FAST_EXP vdt::fast_exp
+//#define FAST_LOG vdt::fast_log
 
 // Non-approximant
-//#define FAST_EXP exp
-//#define FAST_LOG log
+#define FAST_EXP exp
+#define FAST_LOG log
 
 typedef std::vector<double> VD;
 // static VD x64 = {0.0243502926634244325089558, 0.0729931217877990394495429,
@@ -205,7 +205,7 @@ void printVIXcalls(modelPara p, VD tau, double tbar, VD K, double r, int n);
 void printSPXgradient(modelPara p, double S, double r, int n, VD tau, VD K);
 void printVIXgradient(modelPara p, double tbar, double r, int n, VD tau, VD K);
 
-int main() {
+int main(int argc, char* argv[]) {
     double S = 1.0;
     double r = 0.02;
     double tbar = 30 / 365.0;
@@ -263,17 +263,24 @@ int main() {
     // These are maturities divided by 252. Not sure why not 365, but this is
     // just a normalization anyway.
 
-    std::ofstream output;
-    output.open("HestonCalibration");
-    output << std::setprecision(16) << std::scientific;
-    output << "Ik,Ivbar,Iv0,Irho,Isigma,Ok,Rk,Ovbar,Rvbar,Ov0,Rv0,Orho,Rrho,Osigma,Rsigma,stopped_by,time,iteration,pv,jac,lin_sys,e0,e*,Je,Dp,count"<< std::endl;
+    //std::ofstream output;
+    //output.open("HestonCalibration");
+    //output << std::setprecision(16) << std::scientific;
+    //output << "Ik,Ivbar,Iv0,Irho,Isigma,Ok,Rk,Ovbar,Rvbar,Ov0,Rv0,Orho,Rrho,Osigma,Rsigma,stopped_by,time,iteration,pv,jac,lin_sys,e0,e*,Je,Dp,count"<< std::endl;
+
+    std::cout << std::setprecision(16) << std::scientific;
+    std::cout << "Ik,Ivbar,Iv0,Irho,Isigma,Ok,Rk,Ovbar,Rvbar,Ov0,Rv0,Orho,Rrho,Osigma,Rsigma,stopped_by,time,iteration,pv,jac,lin_sys,e0,e*,Je,Dp,count"<< std::endl;
 
 
     std::default_random_engine generator;
     std::uniform_real_distribution<double> distri(0.0, 1.0);
 
+    assert(argc > 2);
 
-    for(int nTest = 0; nTest < 10000; nTest++){
+    double muFactor = std::stod(argv[1]);
+    int nTestMax = std::stoi(argv[2]);
+
+    for(int nTest = 0; nTest < nTestMax; nTest++){
         double k = distri(generator) * 4.5 + 0.5;
         double vbar = distri(generator) * 0.9 + 0.05;
         double v0 = distri(generator) * 0.9 + 0.05;
@@ -293,7 +300,7 @@ int main() {
         mktPara marP = {S, r, SPXtarr, SPXkarr, VIXtarr, VIXkarr, optPrices, tbar};
         double p[5];
         double opts[LM_OPTS_SZ], info[LM_INFO_SZ];
-        opts[0] = LM_INIT_MU;
+        opts[0] = LM_INIT_MU * muFactor;
         // stopping thresholds for
         opts[1] = 1E-10;          // ||J^T e||_inf
         opts[2] = 1E-10;          // ||Dp||_2
@@ -317,19 +324,21 @@ int main() {
 
             dlevmar_der(objFunc, JacFunc, p, NULL, 5, (int)optPrices.size(), 300, opts,
                         info, NULL, NULL, (void *)&marP);
+            //dlevmar_dif(objFunc, p, NULL, 5, (int)optPrices.size(), 300, opts,
+            //            info, NULL, NULL, (void *)&marP);
             count++;
-        }while((int(info[6]) == 2 || int(info[6]) == 7) && count < 30);
+        }while((int(info[6]) == 2 || int(info[6]) == 7) && count < 100);
         double stop_s = clock();
 
-        output << Ik << ", " << Ivbar << ", " << Iv0 << ", " << Irho << ", " << Isigma << ", ";
-        output << p[0] << ", " << k << ", " << p[1] << ", " << vbar << ", "
-               << p[2] << ", " << v0 << ", " << p[3] << ", " << rho << ", "
-               << p[4] << ", " << sigma << ", ";
-        output << int(info[6]) << ", ";
-        output << double(stop_s - start_s) / CLOCKS_PER_SEC << ", ";
-        output << int(info[5]) << ", " << int(info[7]) << ", " << int(info[8]) << ", "
-               << int(info[9]) << ", ";
-        output << info[0] << ", " << info[1] << ", " << info[2] << ", " << info[3] << ", "
+        std::cout << Ik << "," << Ivbar << "," << Iv0 << "," << Irho << "," << Isigma << ",";
+        std::cout << p[0] << "," << k << "," << p[1] << "," << vbar << ","
+               << p[2] << "," << v0 << "," << p[3] << "," << rho << ","
+               << p[4] << "," << sigma << ",";
+        std::cout << int(info[6]) << ",";
+        std::cout << double(stop_s - start_s) / CLOCKS_PER_SEC << ",";
+        std::cout << int(info[5]) << "," << int(info[7]) << "," << int(info[8]) << ","
+               << int(info[9]) << ",";
+        std::cout << info[0] << "," << info[1] << "," << info[2] << "," << info[3] << ","
                << count << std::endl;
     }
 
@@ -605,11 +614,8 @@ intVIXdata VIXintegrand(CD u, modelPara p, double tau, double K, double tbar) {
     return ret;
 }
 
-// For this pricing, the u is not a real but can be a complex. See smile page
-// 7, equation (11). Currently, u is real which means im(u) is 0, but in the
-// paper it said it should be > 0. Do I choose one im(u) and how to choose?
-// So does this numerical integration still work? And what should the upper
-// boundary be?
+// For this pricing, the u is not a real but has to be a complex. See smile page
+// 7, equation (11).
 VD VIXprice(modelPara p, VD tau, double tbar, VD K, double r, int n) {
     int nGrid = gl.nGrid;
 
@@ -630,9 +636,8 @@ VD VIXprice(modelPara p, VD tau, double tbar, VD K, double r, int n) {
         for (int count = 0; count < nGrid; count++) {
             up_u = mid + u[count] * halfRange;
             down_u = mid - u[count] * halfRange;
-            upInt =
-                VIXintegrand(up_u + i, p, T, strike, tbar)
-                    .VIXint;  // What should be the complex part be? By adding
+            upInt = VIXintegrand(up_u + i, p, T, strike, tbar).VIXint;
+                               // What should be the complex part be? By adding
                               // this magic number I already made the price
                               // positive, but how to choose the complex part?
             downInt = VIXintegrand(down_u + i, p, T, strike, tbar).VIXint;
@@ -640,7 +645,7 @@ VD VIXprice(modelPara p, VD tau, double tbar, VD K, double r, int n) {
         }
 
         glInt = halfRange * glCollect;
-        VIXcall = 0.5 * discount / sqrt(pi) * glInt;
+        VIXcall = 50.0 * discount / sqrt(pi) * glInt;
         VIXs.push_back(VIXcall);
     }
     return VIXs;
@@ -710,7 +715,7 @@ VD gradientVIXprice(modelPara p, double r, int n, VD tau, VD K, double tbar) {
     glCollect.reserve(5);
 
     double strike, T, discount, up_u, down_u;
-    double fixedPart = 0.5 / sqrt(pi);
+    double fixedPart = 50.0 / sqrt(pi);
     for (int l = 0; l < n; l++) {
         strike = K[l];
         T = tau[l];
