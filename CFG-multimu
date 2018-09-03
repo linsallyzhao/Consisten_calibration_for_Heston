@@ -1,0 +1,9 @@
+#!/bin/bash -e
+
+set -x
+
+for mu in 0.02 0.1 0.5 2 10 50; do
+    ./CFG "$mu" 1000 > Heston_10000_front1_K1_max100_muFactor"$mu" &
+done
+
+wait
