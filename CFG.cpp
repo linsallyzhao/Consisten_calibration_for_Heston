@@ -205,24 +205,39 @@ void printVIXcalls(modelPara p, VD tau, double tbar, VD K, double r, int n);
 void printSPXgradient(modelPara p, double S, double r, int n, VD tau, VD K);
 void printVIXgradient(modelPara p, double tbar, double r, int n, VD tau, VD K);
 
+
+const double St = 100.0;
+const double S0 = 100.0;
+
 int main(int argc, char* argv[]) {
-    double S = 1.0;
+    double S = St/S0; //This is S(t)/S_0
     double r = 0.02;
     double tbar = 30 / 365.0;
 
     // Maturities for VIX options: 7, 14, 21, 30, 60, 90, (divided by 365)
     // BSdelta: 0.9, 0.75, 0.5, 0.25, 0.1
     const VD VIXkarr = {
-        0.07660333466800909, 0.07823036262505452, 0.08007866879151475,
-        0.08197064388101638, 0.08371167160297435, 0.07528231789011931,
-        0.07755350918528185, 0.08015741494276396, 0.08284874840358378,
-        0.0853482112450969,  0.07430112345712658, 0.077055734551228,
-        0.08023623852982013, 0.08354801898792094, 0.08664544590808211,
-        0.0732872469748735,  0.07654634796281677, 0.08033769704753065,
-        0.08431683207193616, 0.08806642128491488, 0.07084911309063555,
-        0.07534553012964565, 0.08067681958626018, 0.08638533974549638,
-        0.0918677586016848,  0.06910110193769552, 0.07450988995253548,
-        0.08101737363349071, 0.08809320258894406, 0.0949885695945464};
+        7.660333466800909, 7.823036262505452, 8.007866879151475,
+        8.197064388101637, 8.371167160297436, 7.52823178901193,
+        7.755350918528184, 8.015741494276396, 8.284874840358377,
+        8.53482112450969, 7.430112345712659, 7.705573455122799,
+        8.023623852982013, 8.354801898792093, 8.66454459080821,
+        7.32872469748735, 7.654634796281677, 8.033769704753064,
+        8.431683207193617, 8.806642128491488, 7.084911309063554,
+        7.534553012964565, 8.067681958626018, 8.638533974549638,
+        9.186775860168481, 6.910110193769552, 7.450988995253548,
+        8.10173736334907, 8.809320258894406, 9.49885695945464};
+
+
+//0.07660333466800909, 0.07823036262505452, 0.08007866879151475, 0.08197064388101638,
+//0.08371167160297435, 0.07528231789011931, 0.07755350918528185, 0.08015741494276396,
+//0.08284874840358378, 0.0853482112450969, 0.07430112345712658, 0.077055734551228,
+//0.08023623852982013, 0.08354801898792094, 0.08664544590808211, 0.0732872469748735,
+//0.07654634796281677, 0.08033769704753065, 0.08431683207193616, 0.08806642128491488,
+//0.07084911309063555, 0.07534553012964565, 0.08067681958626018, 0.08638533974549638,
+//0.0918677586016848, 0.06910110193769552, 0.07450988995253548, 0.08101737363349071,
+//0.08809320258894406, 0.0949885695945464};
+
 
     const VD VIXtarr = {
         0.01917808, 0.01917808, 0.01917808, 0.01917808, 0.01917808, 0.03835616,
@@ -231,12 +246,43 @@ int main(int argc, char* argv[]) {
         0.08219178, 0.08219178, 0.16438356, 0.16438356, 0.16438356, 0.16438356,
         0.16438356, 0.24657534, 0.24657534, 0.24657534, 0.24657534, 0.24657534};
 
-    const VD SPXkarr = {0.9371, 0.8603, 0.8112, 0.7760, 0.7470, 0.7216, 0.6699,
-                        0.6137, 0.9956, 0.9868, 0.9728, 0.9588, 0.9464, 0.9358,
-                        0.9175, 0.9025, 1.0427, 1.0463, 1.0499, 1.0530, 1.0562,
-                        1.0593, 1.0663, 1.0766, 1.2287, 1.2399, 1.2485, 1.2659,
-                        1.2646, 1.2715, 1.2859, 1.3046, 1.3939, 1.4102, 1.4291,
-                        1.4456, 1.4603, 1.4736, 1.5005, 1.5328};
+    const VD SPXkarr = {
+                        //0.9371, 0.8603, 0.8112, 0.7760, 0.7470, 0.7216, 0.6699,
+                        //0.6137, 0.9956, 0.9868, 0.9728, 0.9588, 0.9464, 0.9358,
+                        //0.9175, 0.9025, 1.0427, 1.0463, 1.0499, 1.0530, 1.0562,
+                        //1.0593, 1.0663, 1.0766, 1.2287, 1.2399, 1.2485, 1.2659,
+                        //1.2646, 1.2715, 1.2859, 1.3046, 1.3939, 1.4102, 1.4291,
+                        //1.4456, 1.4603, 1.4736, 1.5005, 1.5328};
+                        
+                        93.71, 86.03, 81.12, 77.60, 74.70, 72.16, 66.99,
+                        61.37, 99.56, 98.68, 97.28, 95.88, 94.64, 93.58,
+                        91.75, 90.25, 104.27, 104.63, 104.99, 105.30, 105.62,
+                        105.93, 106.63, 107.66, 122.87, 123.99, 124.85, 126.59,
+                        126.46, 127.15, 128.59, 130.46, 139.39, 141.02, 142.91,
+                        144.56, 146.03, 147.36, 150.05, 153.28};
+
+//97.28883965569389, 96.29498634949915, 95.58166302191722, 95.01284349297768,
+//94.53595503163794, 94.12409156648101, 93.14464152996801, 92.40978710004465,
+//98.65287931820181, 98.20985274532919, 97.91468839248834, 97.69577867538504,
+//97.52544510919837, 97.38952084195567, 97.11763556109581, 96.97605143698358,
+//100.19086684892443, 100.38209799938902, 100.57369414672468, 100.76565598758941,
+//100.95798421997094, 101.15067954318921, 101.7309750947023, 102.31459974422656,
+//101.75283143597832, 102.60238985276533, 103.30490879747222, 103.93199751595301,
+//104.5113361579374, 105.05709324366258, 106.5634602194198, 107.94703605377994,
+//103.1794585634305, 104.64268162608604, 105.82644865678365, 106.86678825015554,
+//107.81627555726091, 108.70181907490016, 111.1088209018361, 113.28104575642101};
+
+//0.9728, 0.9629, 0.9558, 0.9501,
+//0.9453, 0.9412, 0.9314, 0.9240,
+//0.9865, 0.9820, 0.9791, 0.9769,
+//0.9752, 0.9738, 0.9711, 0.9697,
+//1.0019, 1.0038, 1.0057, 1.0076,
+//1.0095, 1.0115, 1.0173, 1.0231,
+//1.0175, 1.0260, 1.0330, 1.0393,
+//1.0451, 1.0505, 1.0656, 1.0794,
+//1.0317, 1.0464, 1.0582, 1.0686,
+//1.0781, 1.0870, 1.1110, 1.1328};
+
 
     const VD SPXtarr = {
         0.08219178, 0.16438356, 0.24657534, 0.32876712, 0.4109589,  0.49315068,
@@ -246,22 +292,6 @@ int main(int argc, char* argv[]) {
         0.08219178, 0.16438356, 0.24657534, 0.32876712, 0.4109589,  0.49315068,
         0.73972603, 0.98630137, 0.08219178, 0.16438356, 0.24657534, 0.32876712,
         0.4109589,  0.49315068, 0.73972603, 0.98630137};
-    //const VD SPXtarr = {0.119047619047619, 0.238095238095238, 0.357142857142857,
-    //                    0.476190476190476, 0.595238095238095, 0.714285714285714,
-    //                    1.07142857142857,  1.42857142857143,  0.119047619047619,
-    //                    0.238095238095238, 0.357142857142857, 0.476190476190476,
-    //                    0.595238095238095, 0.714285714285714, 1.07142857142857,
-    //                    1.42857142857143,  0.119047619047619, 0.238095238095238,
-    //                    0.357142857142857, 0.476190476190476, 0.595238095238095,
-    //                    0.714285714285714, 1.07142857142857,  1.42857142857143,
-    //                    0.119047619047619, 0.238095238095238, 0.357142857142857,
-    //                    0.476190476190476, 0.595238095238095, 0.714285714285714,
-    //                    1.07142857142857,  1.42857142857143,  0.119047619047619,
-    //                    0.238095238095238, 0.357142857142857, 0.476190476190476,
-    //                    0.595238095238095, 0.714285714285714, 1.07142857142857,
-    //                    1.42857142857143};
-    // These are maturities divided by 252. Not sure why not 365, but this is
-    // just a normalization anyway.
 
     //std::ofstream output;
     //output.open("HestonCalibration");
@@ -269,7 +299,7 @@ int main(int argc, char* argv[]) {
     //output << "Ik,Ivbar,Iv0,Irho,Isigma,Ok,Rk,Ovbar,Rvbar,Ov0,Rv0,Orho,Rrho,Osigma,Rsigma,stopped_by,time,iteration,pv,jac,lin_sys,e0,e*,Je,Dp,count"<< std::endl;
 
     std::cout << std::setprecision(16) << std::scientific;
-    std::cout << "Ik,Ivbar,Iv0,Irho,Isigma,Ok,Rk,Ovbar,Rvbar,Ov0,Rv0,Orho,Rrho,Osigma,Rsigma,stopped_by,time,iteration,pv,jac,lin_sys,e0,e*,Je,Dp,count"<< std::endl;
+    std::cout << "Ik,Ivbar,Iv0,Irho,Isigma,Ok,Rk,Ovbar,Rvbar,Ov0,Rv0,Orho,Rrho,Osigma,Rsigma,stopped_by,time,iteration,pv,jac,lin_sys,e0,e*,Je,Dp,count,count2,count7"<< std::endl;
 
 
     std::default_random_engine generator;
@@ -307,6 +337,8 @@ int main(int argc, char* argv[]) {
         opts[3] = 1E-10;          // ||e||_2
         opts[4] = LM_DIFF_DELTA;  // finite difference if used
         int count = 0;
+        int countSmallDp = 0;
+        int count7 = 0;
         double Ik, Ivbar, Iv0, Irho, Isigma;
         double start_s = clock();
         do{
@@ -327,6 +359,13 @@ int main(int argc, char* argv[]) {
             //dlevmar_dif(objFunc, p, NULL, 5, (int)optPrices.size(), 300, opts,
             //            info, NULL, NULL, (void *)&marP);
             count++;
+            if ((int(info[6]) == 2)){
+                countSmallDp++;
+            }
+            if ((int(info[6]) == 7)){
+                count7++;
+            }
+
         }while((int(info[6]) == 2 || int(info[6]) == 7) && count < 100);
         double stop_s = clock();
 
@@ -339,7 +378,7 @@ int main(int argc, char* argv[]) {
         std::cout << int(info[5]) << "," << int(info[7]) << "," << int(info[8]) << ","
                << int(info[9]) << ",";
         std::cout << info[0] << "," << info[1] << "," << info[2] << "," << info[3] << ","
-               << count << std::endl;
+               << count << "," << countSmallDp << "," << count7 << std::endl;
     }
 
     //showSPXcallPrices(mp, SPXtarr, S, SPXkarr, r, (int)SPXkarr.size());
@@ -413,11 +452,11 @@ CFPriceData CFprice(CD u, modelPara p, double tau, double S, double r) {
     CD A1 = interU * sinh(interD);
     CD A2 = (d * cosh(interD) + xi * sinh(interD)) / p.v0;
     CD A = A1 / A2;
-    CD D = log(d / (p.v0 * A2)) + p.k * tau * 0.5;
+    CD D = FAST_LOG(d / (p.v0 * A2)) + p.k * tau * 0.5;
     double tmp = p.k * p.vbar / p.sigma;
 
     CD CF = exp(iu * (FAST_LOG(S) + r * tau) - tmp * p.rho * tau * iu - A +
-                2 * tmp * D / p.sigma);
+                2 * tmp * D / p.sigma); //equation (3.8)
 
     CFPriceData ret = {CF, iu, interU, xi, d, interD, A1, A2, A, D};
     return ret;
@@ -429,7 +468,7 @@ double SPXintegrand(double u, modelPara p, double tau, double K, double S,
     CD inputU = u - i * 0.5;
     double x = FAST_LOG(S);
     double rT = r * tau;
-    double kappa = x - FAST_LOG(K) + rT;
+    double kappa = FAST_LOG(St/K) + rT;
     CD integrand1 = exp(iu * kappa - i * inputU * (x + rT));
     CFPriceData tmp = CFprice(inputU, p, tau, S, r);
     CD CFpri = tmp.CFPrice;
@@ -467,7 +506,7 @@ VD SPXprice(modelPara p, VD tau, double S, VD K, double r,
         }
 
         glInt = halfRange * glCollect;
-        SPXcall = S - sqrt(strike * S) * FAST_EXP(-rT * 0.5) / pi * glInt;
+        SPXcall = St - sqrt(strike * St) * FAST_EXP(-rT * 0.5) / pi * glInt;
         SPXs.push_back(SPXcall);
     }
 
@@ -516,19 +555,16 @@ VD gradSPXintgrand(double u, modelPara p, double tau, double K, double S,
     CD v0Par = (-CFP.A / p.v0) * CFP.CFPrice;
     CD vbarPar = (tmp1 / p.vbar * CFP.D - tmpBase * p.rho) * CFP.CFPrice;
     CD rhoPar = (-A_rho + tmp1 / CFP.d * (d_rho - dOverA2 * A2_rho) -
-                 tmpBase * p.vbar) *
-                CFP.CFPrice;
+                 tmpBase * p.vbar) * CFP.CFPrice;
     CD kPar = (1.0 / (p.sigma * CFP.iu) * A_rho + tmp1 / p.k * CFP.D +
-               tmp1 / B * B_k - tmpBase / p.k * p.vbar * p.rho) *
-              CFP.CFPrice;
+               tmp1 / B * B_k - tmpBase / p.k * p.vbar * p.rho) * CFP.CFPrice;
     CD sigmaPar = (-A_sigma - 2.0 * tmp1 / p.sigma * CFP.D +
                    tmp1 / CFP.d * (d_sigma - dOverA2 * A2_sigma) +
-                   tmpBase * p.vbar * p.rho / p.sigma) *
-                  CFP.CFPrice;
+                   tmpBase * p.vbar * p.rho / p.sigma) * CFP.CFPrice;
 
     double x = FAST_LOG(S);
     double rT = r * tau;
-    double kappa = x - FAST_LOG(K) + rT;
+    double kappa = FAST_LOG(St/K) + rT;
     CD integrand1 = exp(i * u * kappa - i * inputU * (x + rT));
     double integrand2 = pow(u, 2) + 0.25;
 
@@ -570,7 +606,7 @@ VD gradientSPXprice(modelPara p, double S, double r, int n, VD tau, VD K) {
         }
         for (int p = 0; p < 5; p++) {
             glCollect[p] = glCollect[p] * halfRange;
-            gradSPX.push_back(-sqrt(strike * S) * FAST_EXP(-rT * 0.5) / pi *
+            gradSPX.push_back(-sqrt(strike * St) * FAST_EXP(-rT * 0.5) / pi *
                               glCollect[p]);
         }
     }
@@ -603,7 +639,7 @@ intVIXdata VIXintegrand(CD u, modelPara p, double tau, double K, double tbar) {
     CFvolData tmp = CFvol(inputU, p, tau);
     CD CFvola = tmp.CFvol;
     CD part1 = exp(-iu * btauBar / tbar);
-    CD part2 = 1.0 - Faddeeva::erf(K  * sqrt(-iu));
+    CD part2 = 1.0 - Faddeeva::erf(K  * sqrt(-iu)/S0);
     CD part3 = pow(-iu, 3 / 2.0);
     CD rawInt = CFvola * part1 * part2 / part3;
 
@@ -645,7 +681,7 @@ VD VIXprice(modelPara p, VD tau, double tbar, VD K, double r, int n) {
         }
 
         glInt = halfRange * glCollect;
-        VIXcall = 50.0 * discount / sqrt(pi) * glInt;
+        VIXcall = S0 * discount / (2.0 *sqrt(pi)) * glInt;
         VIXs.push_back(VIXcall);
     }
     return VIXs;
@@ -665,18 +701,18 @@ VD gradVIXintegrand(CD u, modelPara p, double tau, double K, double tbar) {
     CD G_sigma = -2.0 * p.sigma * iU / p.k * sinh(tmp2);
 
     CD h_v0 = inter.F / p.v0;
-    CD h_vbar = tmp1 * log(tmp3 / inter.G);
+    CD h_vbar = tmp1 * FAST_LOG(tmp3 / inter.G);
     CD h_sigma = -2.0 * p.vbar / p.sigma * h_vbar -
                  tmp1 * p.vbar / inter.G * G_sigma -
                  p.v0 * iU / (tmp4 * tmp3) * G_sigma;
     CD h_k = -p.sigma / (2.0 * p.k) * h_sigma +
              p.vbar * tau * iU / (inter.G * tmp3) -
              p.v0 * inter.inputU * tau / (2.0 * p.k * tmp4) *
-                 (2.0 * p.k * i + inter.inputU * var);
+             (2.0 * p.k * i + inter.inputU * var);
 
     // equation (3.16)
     double atauBar_k = (tbar - inter.atauBar * (p.k * tbar + 1)) / p.k;
-    double btauBar_vbar = p.vbar - inter.atauBar;
+    double btauBar_vbar = tbar - inter.atauBar;
     double btauBar_k = -p.vbar * atauBar_k;
 
     // equation (3.23), (3.24)
@@ -715,7 +751,7 @@ VD gradientVIXprice(modelPara p, double r, int n, VD tau, VD K, double tbar) {
     glCollect.reserve(5);
 
     double strike, T, discount, up_u, down_u;
-    double fixedPart = 50.0 / sqrt(pi);
+    double fixedPart = S0 / (2.0 *sqrt(pi));
     for (int l = 0; l < n; l++) {
         strike = K[l];
         T = tau[l];

@@ -234,11 +234,11 @@ int main() {
     VD disInitial = {5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0};
     double p[19];
     // Initial 1
-    //p[0] = 1.2000;
-    //p[1] = 0.20000;
-    //p[2] = 0.2000;
-    //p[3] = -0.6000;
-    //p[4] = 0.3000;
+    p[0] = 1.2000;
+    p[1] = 0.20000;
+    p[2] = 0.2000;
+    p[3] = -0.6000;
+    p[4] = 0.3000;
 
     // Initial 2
     //p[0] = 1.2000;
@@ -248,11 +248,11 @@ int main() {
     //p[4] = 0.2000;
 
     // Initial 3
-    p[0] = 1.4000;
-    p[1] = 0.40000;
-    p[2] = 0.4000;
-    p[3] = -0.7000;
-    p[4] = 0.2000;
+    //p[0] = 1.4000;
+    //p[1] = 0.40000;
+    //p[2] = 0.4000;
+    //p[3] = -0.7000;
+    //p[4] = 0.2000;
     for(int fill = 0; fill < 14; fill++){
         p[fill+5] = disInitial[fill] * 0.0001;
     }
@@ -286,6 +286,8 @@ int main() {
     double start_s = clock();
     dlevmar_der(objFunc, JacFunc, p, NULL, 19, (int)optPrices.size(), 30000,
     opts, info, NULL, NULL, (void *) &marP);
+    //dlevmar_dif(objFunc, p, NULL, 19, (int)optPrices.size(), 30000,
+    //opts, info, NULL, NULL, (void *) &marP);
     double stop_s = clock();
 
     std::cout << "Optimum found:" << std::scientific << std::setprecision(8)
@@ -743,7 +745,7 @@ VD gradVIXintegrand(CD u, modelPara p, double tau, double K, double tbar) {
 
     // equation (3.16)
     double atauBar_k = (tbar - inter.atauBar * (p.k * tbar + 1)) / p.k;
-    double btauBar_vbar = p.vbar - inter.atauBar;
+    double btauBar_vbar = tbar - inter.atauBar;
     double btauBar_k = -p.vbar * atauBar_k;
 
     // equation (3.23), (3.24)

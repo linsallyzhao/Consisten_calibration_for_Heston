@@ -14,6 +14,9 @@ HC: HC.cpp
 CFG: CFG.cpp
 	$(CC) $(CFLAGS) $(LIBS) CFG.cpp -o CFG
 
+best: best.cpp
+	$(CC) $(CFLAGS) $(LIBS) best.cpp -o best
+
 DIS: DIS.cpp
 	$(CC) $(CFLAGS) $(LIBS) DIS.cpp -o DIS
 
