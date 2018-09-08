@@ -314,7 +314,8 @@ int main(int argc, char* argv[]) {
     //output << "Ik,Ivbar,Iv0,Irho,Isigma,Ok,Rk,Ovbar,Rvbar,Ov0,Rv0,Orho,Rrho,Osigma,Rsigma,stopped_by,time,iteration,pv,jac,lin_sys,e0,e*,Je,Dp,count"<< std::endl;
 
     std::cout << std::setprecision(16) << std::scientific;
-    std::cout << "Ik,Ivbar,Iv0,Irho,Isigma,Ok,Rk,Ovbar,Rvbar,Ov0,Rv0,Orho,Rrho,Osigma,Rsigma,stopped_by,time,iteration,pv,jac,lin_sys,e0,e*,Je,Dp,count,count2,count7"<< std::endl;
+    //std::cout << "Ik,Ivbar,Iv0,Irho,Isigma,Ok,Rk,Ovbar,Rvbar,Ov0,Rv0,Orho,Rrho,Osigma,Rsigma,stopped_by,time,iteration,pv,jac,lin_sys,e0,e*,Je,Dp,count,count2,count7"<< std::endl;
+    std::cout << "k,vbar,v0,rho,sigma" << std::endl;
 
 
     std::default_random_engine generator;
@@ -326,11 +327,16 @@ int main(int argc, char* argv[]) {
     int nTestMax = std::stoi(argv[2]);
 
     for(int nTest = 0; nTest < nTestMax; nTest++){
-        double k = distri(generator) * 4.5 + 0.5;
-        double vbar = distri(generator) * 0.9 + 0.05;
-        double v0 = distri(generator) * 0.9 + 0.05;
-        double rho = distri(generator) * (-0.8) - 0.1;
-        double sigma = distri(generator) * 0.9 + 0.05;
+        //double k = distri(generator) * 4.5 + 0.5;
+        //double vbar = distri(generator) * 0.9 + 0.05;
+        //double v0 = distri(generator) * 0.9 + 0.05;
+        //double rho = distri(generator) * (-0.8) - 0.1;
+        //double sigma = distri(generator) * 0.9 + 0.05;
+        double k = 3.93933429e+00;
+        double vbar = 6.07109852e-01;
+        double v0 = 1.62443977e-01;
+        double rho = -5.51629288e-01;
+        double sigma = 3.50281522e-01;
 
 
         modelPara mp = {k, vbar, v0, rho, sigma};
@@ -373,11 +379,16 @@ int main(int argc, char* argv[]) {
         double start_s = clock();
         double err[30] = {-1};
         do{
-            p[0] = distri(generator) * 4.5 + 0.5;
-            p[1] = distri(generator) * 0.9 + 0.05;
-            p[2] = distri(generator) * 0.9 + 0.05;
-            p[3] = distri(generator) * (-0.8) - 0.1;
-            p[4] = distri(generator) * 0.9 + 0.05;
+            //p[0] = distri(generator) * 4.5 + 0.5;
+            //p[1] = distri(generator) * 0.9 + 0.05;
+            //p[2] = distri(generator) * 0.9 + 0.05;
+            //p[3] = distri(generator) * (-0.8) - 0.1;
+            //p[4] = distri(generator) * 0.9 + 0.05;
+            p[0] =1.49098603e+00;
+            p[1] =2.62491155e-01;
+            p[2] =7.69627337e-01;
+            p[3] =-6.34046495e-01;
+            p[4] =7.32472281e-01;
 
             Ik = p[0];
             Ivbar = p[1];
@@ -398,6 +409,9 @@ int main(int argc, char* argv[]) {
             //            info, NULL, NULL, (void *)&marP);
             //dlevmar_dif(objFunc, p, NULL, 5, (int)optPrices.size(), 300, opts,
             //            info, NULL, NULL, (void *)&marP);
+            for (int cP = 0; cP < 5; cP++){
+                std::cout << p[cP] << ",";
+            }
             count++;
             if ((int(info[6]) == 2)){
                 countSmallDp++;
@@ -409,16 +423,16 @@ int main(int argc, char* argv[]) {
         }while((int(info[6]) == 2 || int(info[6]) == 7) && count < 100);
         double stop_s = clock();
 
-        std::cout << Ik << "," << Ivbar << "," << Iv0 << "," << Irho << "," << Isigma << ",";
-        std::cout << p[0] << "," << k << "," << p[1] << "," << vbar << ","
-               << p[2] << "," << v0 << "," << p[3] << "," << rho << ","
-               << p[4] << "," << sigma << ",";
-        std::cout << int(info[6]) << ",";
-        std::cout << double(stop_s - start_s) / CLOCKS_PER_SEC << ",";
-        std::cout << int(info[5]) << "," << int(info[7]) << "," << int(info[8]) << ","
-               << int(info[9]) << ",";
-        std::cout << info[0] << "," << info[1] << "," << info[2] << "," << info[3] << ","
-               << count << "," << countSmallDp << "," << count7 << std::endl;
+        //std::cout << Ik << "," << Ivbar << "," << Iv0 << "," << Irho << "," << Isigma << ",";
+        //std::cout << p[0] << "," << k << "," << p[1] << "," << vbar << ","
+        //       << p[2] << "," << v0 << "," << p[3] << "," << rho << ","
+        //       << p[4] << "," << sigma << ",";
+        //std::cout << int(info[6]) << ",";
+        //std::cout << double(stop_s - start_s) / CLOCKS_PER_SEC << ",";
+        //std::cout << int(info[5]) << "," << int(info[7]) << "," << int(info[8]) << ","
+        //       << int(info[9]) << ",";
+        //std::cout << info[0] << "," << info[1] << "," << info[2] << "," << info[3] << ","
+        //       << count << "," << countSmallDp << "," << count7 << std::endl;
     }
 
     //showSPXcallPrices(mp, SPXtarr, S, SPXkarr, r, (int)SPXkarr.size());
@@ -443,15 +457,19 @@ void objFunc(double *p, double *x, int m, int n, void *data) {
                             (int)mktp->VIX_K.size());
     double Nspx2root = std::sqrt(2 * SPXprices.size());
     double Nvix2root = std::sqrt(2 * VIXprices.size());
+    double res = 0.0;
     for (k = 0; k < (int)SPXprices.size(); k++) {
         x[k] = (SPXprices[k] - mktp->mktPrices[k]) /
                (mktp->mktPrices[k] * Nspx2root);
+        res += std::pow(x[k], 2);
     }
     //k = 0;
     for (int j = k; j < n; j++) {
         x[j] = (VIXprices[j - k] - mktp->mktPrices[j]) /
                (mktp->mktPrices[j] * Nvix2root);
+        res += std::pow(x[j], 2);
     }
+    std::cerr << res << ",";
 }
 
 void JacFunc(double *p, double *jac, int m, int n, void *data) {
@@ -459,10 +477,10 @@ void JacFunc(double *p, double *jac, int m, int n, void *data) {
     mktp = (struct mktPara *)data;
 
     modelPara molp = {p[0], p[1], p[2], p[3], p[4]};
-    //for (int cP = 0; cP < 5; cP++){
-    //    std::cout << p[cP] << " ";
-    //}
-    //std::cout << std::endl;
+    for (int cP = 0; cP < 5; cP++){
+        std::cout << p[cP] << ",";
+    }
+    std::cout << std::endl;
     VD SPXjac =
         gradientSPXprice(molp, mktp->S, mktp->r, (int)mktp->SPX_T.size(),
                          mktp->SPX_T, mktp->SPX_K);
