@@ -1,3 +1,10 @@
+
+
+
+//for functions need to be checked, see function prototypes start from line 188
+
+
+
 #include <levmar/levmar.h>
 #include <vdt/vdtMath.h>
 #include <Faddeeva.hh>
@@ -15,8 +22,8 @@
 //#define FAST_LOG vdt::fast_log
 
 // Non-approximant
-#define FAST_EXP exp
-#define FAST_LOG log
+#define FAST_EXP std::exp
+#define FAST_LOG std::log
 
 typedef std::vector<double> VD;
 // static VD x64 = {0.0243502926634244325089558, 0.0729931217877990394495429,
@@ -179,6 +186,8 @@ struct modelPara {
     double sigma;
 };
 
+
+//Equity option related
 CFPriceData CFprice(CD u, modelPara p, double tau, double S, double r);
 double SPXintegrand(double u, modelPara p, double tau, double K, double S,
                     double r);
@@ -187,15 +196,21 @@ VD gradSPXintgrand(double u, modelPara p, double tau, double K, double S,
                    double r);
 VD gradientSPXprice(modelPara p, double S, double r, int n, VD tau, VD K);
 
-CFvolData CFvol(CD u, modelPara p, double tau);
+//VIX option realted, functions are defined start from line 665
+CFvolData CFvol(CD u, modelPara p, double tau); //return CF of vol, and G, F
 intVIXdata VIXintegrand(CD u, modelPara p, double tau, double K, double tbar);
+//return integrand in VIX pricing formula, equation (3.14), and some intermedia
+//values
 VD VIXprice(modelPara p, VD tau, double tbar, VD K, double r, int n);
+//return VIX price
 VD gradVIXintegrand(CD u, modelPara p, double tau, double K, double tbar);
+//return a vector, integrands of gradient, equation (3.28)
 VD gradientVIXprice(modelPara p, double r, int n, VD tau, VD K, double tbar);
+//return the gradient of VIX price
 
 void objFunc(double *p, double *x, int m, int n, void *data);
 void JacFunc(double *p, double *jac, int m, int n, void *data);
-// For comparing
+// For comparing output
 void showSPXcallPrices(modelPara mp, VD tarr, double S, VD karr, double r,
                        int n);
 void printCFvol(modelPara p, double tau, int n);
@@ -253,7 +268,7 @@ int main(int argc, char* argv[]) {
                         //1.0593, 1.0663, 1.0766, 1.2287, 1.2399, 1.2485, 1.2659,
                         //1.2646, 1.2715, 1.2859, 1.3046, 1.3939, 1.4102, 1.4291,
                         //1.4456, 1.4603, 1.4736, 1.5005, 1.5328};
-                        
+
                         93.71, 86.03, 81.12, 77.60, 74.70, 72.16, 66.99,
                         61.37, 99.56, 98.68, 97.28, 95.88, 94.64, 93.58,
                         91.75, 90.25, 104.27, 104.63, 104.99, 105.30, 105.62,
@@ -321,11 +336,26 @@ int main(int argc, char* argv[]) {
         modelPara mp = {k, vbar, v0, rho, sigma};
 
         VD SPXprices = SPXprice(mp, SPXtarr, S, SPXkarr, r, (int)SPXkarr.size());
+        //ADDprint
+        ////std::cout << "SPX" << std::endl;
+        //for (int cSPX = 0; cSPX < 40; cSPX++){
+        //    std::cout << SPXprices[cSPX] << std::endl;
+        //}
         VD VIXprices = VIXprice(mp, VIXtarr, S, VIXkarr, r, (int)VIXkarr.size());
+        //ADDprint
+        //std::cout << "VIX" << std::endl;
+        //for (int cVIX = 0; cVIX < 30; cVIX++){
+        //    std::cout << VIXprices[cVIX] << std::endl;
+        //}
         VD optPrices;
         optPrices.reserve(SPXprices.size() + VIXprices.size());
         optPrices.insert(optPrices.end(), SPXprices.begin(), SPXprices.end());
         optPrices.insert(optPrices.end(), VIXprices.begin(), VIXprices.end());
+        //ADDprint
+        //std::cout << "Opt" << std::endl;
+        //for (int cOpt = 0; cOpt < 70; cOpt++){
+        //    std::cout << optPrices[cOpt] << std::endl;
+        //}
 
         mktPara marP = {S, r, SPXtarr, SPXkarr, VIXtarr, VIXkarr, optPrices, tbar};
         double p[5];
@@ -341,6 +371,7 @@ int main(int argc, char* argv[]) {
         int count7 = 0;
         double Ik, Ivbar, Iv0, Irho, Isigma;
         double start_s = clock();
+        double err[30] = {-1};
         do{
             p[0] = distri(generator) * 4.5 + 0.5;
             p[1] = distri(generator) * 0.9 + 0.05;
@@ -354,8 +385,17 @@ int main(int argc, char* argv[]) {
             Irho = p[3];
             Isigma = p[4];
 
+            //dlevmar_chkjac(objFunc, JacFunc, p, 5, 30, (void *)&marP, err);
+            //for (int cer = 0; cer < 30; cer++){
+            //    std::cerr << err[cer] << ",";
+            //}
+            //std::cerr << std::endl;
+
+
             dlevmar_der(objFunc, JacFunc, p, NULL, 5, (int)optPrices.size(), 300, opts,
                         info, NULL, NULL, (void *)&marP);
+            //dlevmar_der(objFunc, JacFunc, p, NULL, 5, 30, 300, opts,
+            //            info, NULL, NULL, (void *)&marP);
             //dlevmar_dif(objFunc, p, NULL, 5, (int)optPrices.size(), 300, opts,
             //            info, NULL, NULL, (void *)&marP);
             count++;
@@ -401,12 +441,13 @@ void objFunc(double *p, double *x, int m, int n, void *data) {
                             (int)mktp->SPX_T.size());
     VD VIXprices = VIXprice(molp, mktp->VIX_T, mktp->S, mktp->VIX_K, mktp->r,
                             (int)mktp->VIX_K.size());
-    double Nspx2root = sqrt(2 * SPXprices.size());
-    double Nvix2root = sqrt(2 * VIXprices.size());
+    double Nspx2root = std::sqrt(2 * SPXprices.size());
+    double Nvix2root = std::sqrt(2 * VIXprices.size());
     for (k = 0; k < (int)SPXprices.size(); k++) {
         x[k] = (SPXprices[k] - mktp->mktPrices[k]) /
                (mktp->mktPrices[k] * Nspx2root);
     }
+    //k = 0;
     for (int j = k; j < n; j++) {
         x[j] = (VIXprices[j - k] - mktp->mktPrices[j]) /
                (mktp->mktPrices[j] * Nvix2root);
@@ -418,13 +459,18 @@ void JacFunc(double *p, double *jac, int m, int n, void *data) {
     mktp = (struct mktPara *)data;
 
     modelPara molp = {p[0], p[1], p[2], p[3], p[4]};
+    //for (int cP = 0; cP < 5; cP++){
+    //    std::cout << p[cP] << " ";
+    //}
+    //std::cout << std::endl;
     VD SPXjac =
         gradientSPXprice(molp, mktp->S, mktp->r, (int)mktp->SPX_T.size(),
                          mktp->SPX_T, mktp->SPX_K);
     VD VIXjac = gradientVIXprice(molp, mktp->r, (int)mktp->VIX_T.size(),
                                  mktp->VIX_T, mktp->VIX_K, mktp->tbar);
-    double Nspx2root = sqrt(2 * mktp->SPX_T.size());
-    double Nvix2root = sqrt(2 * mktp->VIX_T.size());
+
+    double Nspx2root = std::sqrt(2 * mktp->SPX_T.size());
+    double Nvix2root = std::sqrt(2 * mktp->VIX_T.size());
     int k;
     for (k = 0; k < (int)mktp->SPX_T.size(); k++) {
         for (int j = 0; j < m; j++) {
@@ -432,6 +478,7 @@ void JacFunc(double *p, double *jac, int m, int n, void *data) {
                 SPXjac[k * m + j] / (mktp->mktPrices[k] * Nspx2root);
         }
     }
+    //k = 0;
     for (int l = k; l < n; l++) {
         for (int j = 0; j < m; j++) {
             jac[l * m + j] =
@@ -442,20 +489,20 @@ void JacFunc(double *p, double *jac, int m, int n, void *data) {
 
 // CF of price, stock option pircing, and gradient of stock option price
 CFPriceData CFprice(CD u, modelPara p, double tau, double S, double r) {
-    double var = pow(p.sigma, 2);
+    double var = std::pow(p.sigma, 2);
 
     CD iu = i * u;
-    CD interU = pow(u, 2) + iu;
+    CD interU = std::pow(u, 2) + iu;
     CD xi = p.k - p.sigma * p.rho * iu;
-    CD d = sqrt(pow(xi, 2) + var * interU);
+    CD d = std::sqrt(std::pow(xi, 2) + var * interU);
     CD interD = d * tau * 0.5;
-    CD A1 = interU * sinh(interD);
-    CD A2 = (d * cosh(interD) + xi * sinh(interD)) / p.v0;
+    CD A1 = interU * std::sinh(interD);
+    CD A2 = (d * std::cosh(interD) + xi * std::sinh(interD)) / p.v0;
     CD A = A1 / A2;
     CD D = FAST_LOG(d / (p.v0 * A2)) + p.k * tau * 0.5;
     double tmp = p.k * p.vbar / p.sigma;
 
-    CD CF = exp(iu * (FAST_LOG(S) + r * tau) - tmp * p.rho * tau * iu - A +
+    CD CF = std::exp(iu * (FAST_LOG(S) + r * tau) - tmp * p.rho * tau * iu - A +
                 2 * tmp * D / p.sigma); //equation (3.8)
 
     CFPriceData ret = {CF, iu, interU, xi, d, interD, A1, A2, A, D};
@@ -469,10 +516,10 @@ double SPXintegrand(double u, modelPara p, double tau, double K, double S,
     double x = FAST_LOG(S);
     double rT = r * tau;
     double kappa = FAST_LOG(St/K) + rT;
-    CD integrand1 = exp(iu * kappa - i * inputU * (x + rT));
+    CD integrand1 = std::exp(iu * kappa - i * inputU * (x + rT));
     CFPriceData tmp = CFprice(inputU, p, tau, S, r);
     CD CFpri = tmp.CFPrice;
-    double SPXint = real(integrand1 * CFpri) / (pow(u, 2) + 0.25);
+    double SPXint = real(integrand1 * CFpri) / (std::pow(u, 2) + 0.25);
 
     return SPXint;
 }
@@ -506,7 +553,7 @@ VD SPXprice(modelPara p, VD tau, double S, VD K, double r,
         }
 
         glInt = halfRange * glCollect;
-        SPXcall = St - sqrt(strike * St) * FAST_EXP(-rT * 0.5) / pi * glInt;
+        SPXcall = St - std::sqrt(strike * St) * FAST_EXP(-rT * 0.5) / pi * glInt;
         SPXs.push_back(SPXcall);
     }
 
@@ -518,25 +565,25 @@ VD gradSPXintgrand(double u, modelPara p, double tau, double K, double S,
     VD gradSPXint;
     gradSPXint.reserve(5);
     CD inputU = u - i * 0.5;
-    double var = pow(p.sigma, 2);
+    double var = std::pow(p.sigma, 2);
     CFPriceData CFP = CFprice(inputU, p, tau, S, r);
-    CD B = exp(CFP.D);
+    CD B = std::exp(CFP.D);
     CD tmpBase = p.k * tau * CFP.iu / p.sigma;
     double tmp1 = 2 * p.k * p.vbar / var;
     CD dOverA2 = CFP.d / CFP.A2;
     CD interXi = 2.0 + tau * CFP.xi;
     CD revA2 = 1.0 / CFP.A2;
     CD AoverA2 = CFP.A / CFP.A2;
-    CD coshInterD = cosh(CFP.interD);
+    CD coshInterD = std::cosh(CFP.interD);
 
     // Partials for rho
     CD d_rho = -CFP.xi * p.sigma * CFP.iu / CFP.d;
     CD A1_rho = -CFP.iu * CFP.interU * tau * CFP.xi * p.sigma / (2.0 * CFP.d) *
                 coshInterD;
     CD A2_rho = -p.sigma * CFP.iu * interXi / (2.0 * CFP.d * p.v0) *
-                (CFP.xi * coshInterD + CFP.d * sinh(CFP.interD));
+                (CFP.xi * coshInterD + CFP.d * std::sinh(CFP.interD));
     CD A_rho = revA2 * A1_rho - AoverA2 * A2_rho;
-    CD B_rho = exp(p.k * tau * 0.5) / p.v0 *
+    CD B_rho = std::exp(p.k * tau * 0.5) / p.v0 *
                (revA2 * d_rho - dOverA2 / CFP.A2 * A2_rho);
 
     // Partials for k
@@ -544,7 +591,7 @@ VD gradSPXintgrand(double u, modelPara p, double tau, double K, double S,
 
     // Partials for sigma
     CD d_sigma = (p.rho / p.sigma - 1.0 / CFP.xi) * d_rho +
-                 p.sigma * pow(inputU, 2) / CFP.d;
+                 p.sigma * std::pow(inputU, 2) / CFP.d;
     CD A1_sigma = CFP.interU * tau * d_sigma * coshInterD / 2.0;
     CD A2_sigma = p.rho / p.sigma * A2_rho -
                   interXi / (p.v0 * tau * CFP.xi * CFP.iu) * A1_rho +
@@ -565,8 +612,8 @@ VD gradSPXintgrand(double u, modelPara p, double tau, double K, double S,
     double x = FAST_LOG(S);
     double rT = r * tau;
     double kappa = FAST_LOG(St/K) + rT;
-    CD integrand1 = exp(i * u * kappa - i * inputU * (x + rT));
-    double integrand2 = pow(u, 2) + 0.25;
+    CD integrand1 = std::exp(i * u * kappa - i * inputU * (x + rT));
+    double integrand2 = std::pow(u, 2) + 0.25;
 
     gradSPXint.push_back(real(integrand1 * kPar) / integrand2);
     gradSPXint.push_back(real(integrand1 * vbarPar) / integrand2);
@@ -606,7 +653,7 @@ VD gradientSPXprice(modelPara p, double S, double r, int n, VD tau, VD K) {
         }
         for (int p = 0; p < 5; p++) {
             glCollect[p] = glCollect[p] * halfRange;
-            gradSPX.push_back(-sqrt(strike * St) * FAST_EXP(-rT * 0.5) / pi *
+            gradSPX.push_back(-std::sqrt(strike * St) * FAST_EXP(-rT * 0.5) / pi *
                               glCollect[p]);
         }
     }
@@ -614,22 +661,24 @@ VD gradientSPXprice(modelPara p, double S, double r, int n, VD tau, VD K) {
     return gradSPX;
 }
 
-// CF of vol, VIX option pricing, and gradient of VIX option pricing
+//Functions return CF of vol, VIX option pricing, and gradient of VIX option pricing
 CFvolData CFvol(CD u, modelPara p, double tau) {
-    double var = pow(p.sigma, 2);
+    double var = std::pow(p.sigma, 2);
 
     CD iu = u * i;
     double ktauH = p.k * tau * 0.5;
-    CD G = cosh(ktauH) + (1.0 - var * iu / p.k) * sinh(ktauH);
-    CD F = p.v0 * iu / G * FAST_EXP(-ktauH);
+    CD G = std::cosh(ktauH) + (1.0 - var * iu / p.k) * std::sinh(ktauH);//Eq 3.33b
+    CD F = p.v0 * iu / G * FAST_EXP(-ktauH);//Eq 3.33a
 
-    CD CF = pow(FAST_EXP(ktauH) / G, 2 * p.k * p.vbar / var) * exp(F);
+    CD CF = std::pow(FAST_EXP(ktauH) / G, 2 * p.k * p.vbar / var) * std::exp(F);//Eq 3.32
     CFvolData ret = {CF, G, F};
 
     return ret;
 }
 
 intVIXdata VIXintegrand(CD u, modelPara p, double tau, double K, double tbar) {
+//this whole function returns the integrand of Eq 3.14, and some intermedia
+//results
     CD iu = i * u;
     double k = p.k;
     double vbar = p.vbar;
@@ -638,9 +687,9 @@ intVIXdata VIXintegrand(CD u, modelPara p, double tau, double K, double tbar) {
     double btauBar = vbar * (tbar - atauBar);
     CFvolData tmp = CFvol(inputU, p, tau);
     CD CFvola = tmp.CFvol;
-    CD part1 = exp(-iu * btauBar / tbar);
-    CD part2 = 1.0 - Faddeeva::erf(K  * sqrt(-iu)/S0);
-    CD part3 = pow(-iu, 3 / 2.0);
+    CD part1 = std::exp(-iu * btauBar / tbar);
+    CD part2 = 1.0 - Faddeeva::erf(K  * std::sqrt(-iu)/S0);
+    CD part3 = std::pow(-iu, 3 / 2.0);
     CD rawInt = CFvola * part1 * part2 / part3;
 
     double VIXint = real(rawInt);
@@ -667,21 +716,21 @@ VD VIXprice(modelPara p, VD tau, double tbar, VD K, double r, int n) {
     for (int j = 0; j < n; j++) {
         strike = K[j];
         T = tau[j];
-        discount = exp(-r * T);
+        discount = std::exp(-r * T);
         glCollect = 0.0;
-        for (int count = 0; count < nGrid; count++) {
+        for (int count = 0; count < nGrid; count++) {//This loop does integration
             up_u = mid + u[count] * halfRange;
             down_u = mid - u[count] * halfRange;
-            upInt = VIXintegrand(up_u + i, p, T, strike, tbar).VIXint;
+            upInt = VIXintegrand(up_u + 2.0*i, p, T, strike, tbar).VIXint;
                                // What should be the complex part be? By adding
                               // this magic number I already made the price
                               // positive, but how to choose the complex part?
-            downInt = VIXintegrand(down_u + i, p, T, strike, tbar).VIXint;
+            downInt = VIXintegrand(down_u + 2.0*i, p, T, strike, tbar).VIXint;
             glCollect += w[count] * (upInt + downInt);
         }
 
-        glInt = halfRange * glCollect;
-        VIXcall = S0 * discount / (2.0 *sqrt(pi)) * glInt;
+        glInt = halfRange * glCollect;//integral
+        VIXcall = S0 * discount / (2.0 *std::sqrt(pi)) * glInt; //Eq 3.14
         VIXs.push_back(VIXcall);
     }
     return VIXs;
@@ -689,47 +738,42 @@ VD VIXprice(modelPara p, VD tau, double tbar, VD K, double r, int n) {
 
 VD gradVIXintegrand(CD u, modelPara p, double tau, double K, double tbar) {
     intVIXdata inter = VIXintegrand(u, p, tau, K, tbar);
-    double var = pow(p.sigma, 2);
+    double var = std::pow(p.sigma, 2);
     double tmp1 = 2.0 * p.k / var;
     double tmp2 = p.k * tau * 0.5;
     double tmp3 = FAST_EXP(tmp2);
-    CD tmp4 = pow(inter.G, 2);
+    CD tmp4 = std::pow(inter.G, 2);
     CD iU = i * inter.inputU;
     CD iuOverTbar = inter.iu / tbar;
 
-    // equation (3.34)
-    CD G_sigma = -2.0 * p.sigma * iU / p.k * sinh(tmp2);
+    CD G_sigma = -2.0 * p.sigma * iU / p.k * std::sinh(tmp2);// equation (3.35)
 
-    CD h_v0 = inter.F / p.v0;
-    CD h_vbar = tmp1 * FAST_LOG(tmp3 / inter.G);
+    CD h_v0 = inter.F / p.v0;//Eq 3.14a
+    CD h_vbar = tmp1 * FAST_LOG(tmp3 / inter.G);//Eq 3.14b
     CD h_sigma = -2.0 * p.vbar / p.sigma * h_vbar -
                  tmp1 * p.vbar / inter.G * G_sigma -
-                 p.v0 * iU / (tmp4 * tmp3) * G_sigma;
+                 p.v0 * iU / (tmp4 * tmp3) * G_sigma;//Eq 3.14c
     CD h_k = -p.sigma / (2.0 * p.k) * h_sigma +
              p.vbar * tau * iU / (inter.G * tmp3) -
              p.v0 * inter.inputU * tau / (2.0 * p.k * tmp4) *
-             (2.0 * p.k * i + inter.inputU * var);
+             (2.0 * p.k * i + inter.inputU * var);//Eq 3.14d
 
     // equation (3.16)
-    double atauBar_k = (tbar - inter.atauBar * (p.k * tbar + 1)) / p.k;
-    double btauBar_vbar = tbar - inter.atauBar;
-    double btauBar_k = -p.vbar * atauBar_k;
+    double atauBar_k = (tbar - inter.atauBar * (p.k * tbar + 1)) / p.k;//Eq 3.16a
+    double btauBar_vbar = tbar - inter.atauBar;//Eq 3.16b
+    double btauBar_k = -p.vbar * atauBar_k;//Eq 3.16c
 
-    // equation (3.23), (3.24)
-    CD G_U = (inter.G - tmp3) / inter.inputU;
-    CD hPrime = h_k - u / tbar *
-                          (inter.F / inter.inputU -
-                           1.0 / inter.G * (tmp1 * p.vbar + inter.F) * G_U) *
-                          atauBar_k;
+    CD G_U = (inter.G - tmp3) / inter.inputU;//Eq 3.23
+    CD hPrime = h_k - u / tbar * (inter.F / inter.inputU - 1.0 / inter.G *
+                (tmp1 * p.vbar + inter.F) * G_U) * atauBar_k;//Eq 3.24
 
-    // equation (3.29)
-    CD H_vbar = h_vbar - iuOverTbar * btauBar_vbar;
-    CD H_k = hPrime - iuOverTbar * btauBar_k;
+    CD H_vbar = h_vbar - iuOverTbar * btauBar_vbar;// equation (3.29)
+    CD H_k = hPrime - iuOverTbar * btauBar_k;// equation (3.29)
 
     VD ret;
     ret.reserve(5);
 
-    // equation (3.28)
+    //integrand of equation (3.28)
     ret.push_back(real(H_k * inter.rawVIXint));
     ret.push_back(real(H_vbar * inter.rawVIXint));
     ret.push_back(real(h_v0 * inter.rawVIXint));
@@ -751,23 +795,23 @@ VD gradientVIXprice(modelPara p, double r, int n, VD tau, VD K, double tbar) {
     glCollect.reserve(5);
 
     double strike, T, discount, up_u, down_u;
-    double fixedPart = S0 / (2.0 *sqrt(pi));
+    double fixedPart = S0 / (2.0 *std::sqrt(pi));
     for (int l = 0; l < n; l++) {
         strike = K[l];
         T = tau[l];
-        discount = exp(-r * T);
+        discount = std::exp(-r * T);
         for (int cc = 0; cc < 5; cc++) glCollect[cc] = 0.0;
-        for (int count = 0; count < nGrid; count++) {
+        for (int count = 0; count < nGrid; count++) {//integration in Eq 3.28
             up_u = mid + u[count] * halfRange;
             down_u = mid - u[count] * halfRange;
-            upInt = gradVIXintegrand(up_u + i, p, T, strike, tbar);
-            downInt = gradVIXintegrand(down_u + i, p, T, strike, tbar);
+            upInt = gradVIXintegrand(up_u + 2.0*i, p, T, strike, tbar);
+            downInt = gradVIXintegrand(down_u + 2.0*i, p, T, strike, tbar);
             for (int j = 0; j < 5; j++)
-                glCollect[j] = w[count] * (upInt[j] + downInt[j]);
+                glCollect[j] += w[count] * (upInt[j] + downInt[j]);
         }
         for (int p = 0; p < 5; p++) {
-            glCollect[p] = glCollect[p] * halfRange;
-            gradVIX.push_back(fixedPart * discount * glCollect[p]);
+            glCollect[p] = glCollect[p] * halfRange; //integral in Eq 3.28
+            gradVIX.push_back(fixedPart * discount * glCollect[p]); //gradients of VIX price
         }
     }
 
