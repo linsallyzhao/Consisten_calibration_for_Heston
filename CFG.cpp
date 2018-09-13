@@ -443,19 +443,17 @@ void objFunc(double *p, double *x, int m, int n, void *data) {
     //           (mktp->mktPrices[k] * Nspx2root);
     //}
     VD u = *gl.abs;
-    CD CFvols[30];
+    double integrands[30];
     VD VIX_time = mktp->VIX_T;
+    VD VIX_Str = mktp->VIX_K;
     double tbar = mktp->tbar;
-    double k = p[0];
-    double vbar = p[1];
-    double atauBar = (1.0 - FAST_EXP(-tbar * k)) / k;
     for (int count = 0; count < 30; count++){
-        CD inputU = -u[count] * atauBar / tbar;
-        CFvols[count] = CFvol(inputU, molp, VIX_time[count]).CFvol;
+        double up_u = mid + u[count] * halfRange;
+        integrands[count] = VIXintegrand(up_u + 2.0*i, molp, VIX_time[count], VIX_Str[count], tbar).VIXint;
     }
     kk = 0;
     for (int j = kk; j < n; j++) {
-        x[j] = real(CFvols[j]);
+        x[j] = integrands[j];
         //x[j] = (VIXprices[j - k] - mktp->mktPrices[j]) /
         //       (mktp->mktPrices[j] * Nvix2root);
     }
@@ -490,7 +488,8 @@ void JacFunc(double *p, double *jac, int m, int n, void *data) {
     VD VIX_Str = mktp->VIX_K;
     k = 0;
     for (int l = k; l < n; l++) {
-        VD grads = gradVIXintegrand(u[l], molp, VIX_time[l], VIX_Str[l], mktp->tbar);
+        double up_u = mid + u[l] * halfRange;
+        VD grads = gradVIXintegrand(up_u + 2.0*i, molp, VIX_time[l], VIX_Str[l], mktp->tbar);
         jac[l*m+0] = grads[0];
         jac[l*m+1] = grads[1];
         jac[l*m+2] = grads[2];
@@ -785,24 +784,26 @@ VD gradVIXintegrand(CD u, modelPara p, double tau, double K, double tbar) {
     CD hPrime = h_k - u / tbar * (inter.F / inter.inputU - 1.0 / inter.G *
                 (tmp1 * p.vbar + inter.F) * G_U) * atauBar_k;//Eq 3.24
 
-    //CD H_vbar = h_vbar - iuOverTbar * btauBar_vbar;// equation (3.29)
-    //CD H_k = hPrime - iuOverTbar * btauBar_k;// equation (3.29)
+    CD H_vbar = h_vbar - iuOverTbar * btauBar_vbar;// equation (3.29)
+    CD H_k = hPrime - iuOverTbar * btauBar_k;// equation (3.29)
 
     VD ret;
     ret.reserve(5);
 
-    ////integrand of equation (3.28)
-    //ret.push_back(real(H_k * inter.rawVIXint));
-    //ret.push_back(real(H_vbar * inter.rawVIXint));
-    //ret.push_back(real(h_v0 * inter.rawVIXint));
-    //ret.push_back(0.0);
-    //ret.push_back(real(h_sigma * inter.rawVIXint));
-    CD CF = std::pow(FAST_EXP(tmp2) / inter.G, 2 * p.k * p.vbar / var) * std::exp(inter.F);//Eq 3.32
-    ret.push_back(real(hPrime*CF));
-    ret.push_back(real(h_vbar*CF));
-    ret.push_back(real(h_v0*CF));
+    //integrand of equation (3.28)
+    ret.push_back(real(H_k * inter.rawVIXint));
+    ret.push_back(real(H_vbar * inter.rawVIXint));
+    ret.push_back(real(h_v0 * inter.rawVIXint));
     ret.push_back(0.0);
-    ret.push_back(real(h_sigma*CF));
+    ret.push_back(real(h_sigma * inter.rawVIXint));
+
+    //test the ingradient of CFvol, equation(3.34)
+    //CD CF = std::pow(FAST_EXP(tmp2) / inter.G, 2 * p.k * p.vbar / var) * std::exp(inter.F);//Eq 3.32
+    //ret.push_back(real(hPrime*CF));
+    //ret.push_back(real(h_vbar*CF));
+    //ret.push_back(real(h_v0*CF));
+    //ret.push_back(0.0);
+    //ret.push_back(real(h_sigma*CF));
     return ret;
 }
 
