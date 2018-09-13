@@ -224,7 +224,7 @@ void printVIXgradient(modelPara p, double tbar, double r, int n, VD tau, VD K);
 const double St = 100.0;
 const double S0 = 100.0;
 
-int main(int argc, char* argv[]) {
+int main() {
     double S = St/S0; //This is S(t)/S_0
     double r = 0.02;
     double tbar = 30 / 365.0;
@@ -273,8 +273,7 @@ int main(int argc, char* argv[]) {
                         61.37, 99.56, 98.68, 97.28, 95.88, 94.64, 93.58,
                         91.75, 90.25, 104.27, 104.63, 104.99, 105.30, 105.62,
                         105.93, 106.63, 107.66, 122.87, 123.99, 124.85, 126.59,
-                        126.46, 127.15, 128.59, 130.46, 139.39, 141.02, 142.91,
-                        144.56, 146.03, 147.36, 150.05, 153.28};
+                        126.46, 127.15};
 
 //97.28883965569389, 96.29498634949915, 95.58166302191722, 95.01284349297768,
 //94.53595503163794, 94.12409156648101, 93.14464152996801, 92.40978710004465,
@@ -305,8 +304,7 @@ int main(int argc, char* argv[]) {
         0.4109589,  0.49315068, 0.73972603, 0.98630137, 0.08219178, 0.16438356,
         0.24657534, 0.32876712, 0.4109589,  0.49315068, 0.73972603, 0.98630137,
         0.08219178, 0.16438356, 0.24657534, 0.32876712, 0.4109589,  0.49315068,
-        0.73972603, 0.98630137, 0.08219178, 0.16438356, 0.24657534, 0.32876712,
-        0.4109589,  0.49315068, 0.73972603, 0.98630137};
+        };
 
     //std::ofstream output;
     //output.open("HestonCalibration");
@@ -314,18 +312,13 @@ int main(int argc, char* argv[]) {
     //output << "Ik,Ivbar,Iv0,Irho,Isigma,Ok,Rk,Ovbar,Rvbar,Ov0,Rv0,Orho,Rrho,Osigma,Rsigma,stopped_by,time,iteration,pv,jac,lin_sys,e0,e*,Je,Dp,count"<< std::endl;
 
     std::cout << std::setprecision(16) << std::scientific;
-    std::cout << "Ik,Ivbar,Iv0,Irho,Isigma,Ok,Rk,Ovbar,Rvbar,Ov0,Rv0,Orho,Rrho,Osigma,Rsigma,stopped_by,time,iteration,pv,jac,lin_sys,e0,e*,Je,Dp,count,count2,count7"<< std::endl;
 
 
     std::default_random_engine generator;
     std::uniform_real_distribution<double> distri(0.0, 1.0);
 
-    assert(argc > 2);
 
-    double muFactor = std::stod(argv[1]);
-    int nTestMax = std::stoi(argv[2]);
-
-    for(int nTest = 0; nTest < nTestMax; nTest++){
+    for(int nTest = 0; nTest < 1; nTest++){
         double k = distri(generator) * 4.5 + 0.5;
         double vbar = distri(generator) * 0.9 + 0.05;
         double v0 = distri(generator) * 0.9 + 0.05;
@@ -360,7 +353,7 @@ int main(int argc, char* argv[]) {
         mktPara marP = {S, r, SPXtarr, SPXkarr, VIXtarr, VIXkarr, optPrices, tbar};
         double p[5];
         double opts[LM_OPTS_SZ], info[LM_INFO_SZ];
-        opts[0] = LM_INIT_MU * muFactor;
+        opts[0] = LM_INIT_MU;
         // stopping thresholds for
         opts[1] = 1E-10;          // ||J^T e||_inf
         opts[2] = 1E-10;          // ||Dp||_2
@@ -392,10 +385,10 @@ int main(int argc, char* argv[]) {
             //std::cerr << std::endl;
 
 
-            dlevmar_der(objFunc, JacFunc, p, NULL, 5, (int)optPrices.size(), 300, opts,
-                        info, NULL, NULL, (void *)&marP);
-            //dlevmar_der(objFunc, JacFunc, p, NULL, 5, 30, 300, opts,
+            //dlevmar_der(objFunc, JacFunc, p, NULL, 5, (int)optPrices.size(), 300, opts,
             //            info, NULL, NULL, (void *)&marP);
+            dlevmar_der(objFunc, JacFunc, p, NULL, 5, 30, 300, opts,
+                        info, NULL, NULL, (void *)&marP);
             //dlevmar_dif(objFunc, p, NULL, 5, (int)optPrices.size(), 300, opts,
             //            info, NULL, NULL, (void *)&marP);
             count++;
@@ -409,6 +402,7 @@ int main(int argc, char* argv[]) {
         }while((int(info[6]) == 2 || int(info[6]) == 7) && count < 100);
         double stop_s = clock();
 
+        std::cout << "Ik,Ivbar,Iv0,Irho,Isigma,Ok,Rk,Ovbar,Rvbar,Ov0,Rv0,Orho,Rrho,Osigma,Rsigma,stopped_by,time,iteration,pv,jac,lin_sys,e0,e*,Je,Dp,count,count2,count7"<< std::endl;
         std::cout << Ik << "," << Ivbar << "," << Iv0 << "," << Irho << "," << Isigma << ",";
         std::cout << p[0] << "," << k << "," << p[1] << "," << vbar << ","
                << p[2] << "," << v0 << "," << p[3] << "," << rho << ","
@@ -421,6 +415,7 @@ int main(int argc, char* argv[]) {
                << count << "," << countSmallDp << "," << count7 << std::endl;
     }
 
+
     //showSPXcallPrices(mp, SPXtarr, S, SPXkarr, r, (int)SPXkarr.size());
     //printSPXgradient(mp, S, r, (int)SPXkarr.size(), SPXtarr, SPXkarr);
     //printCFvol(mp, VIXtarr[1], gl.nGrid>>1);
@@ -431,7 +426,7 @@ int main(int argc, char* argv[]) {
 
 // Functions to keep
 void objFunc(double *p, double *x, int m, int n, void *data) {
-    int k;
+    int kk;
     (void)m;
     mktPara *mktp;
     mktp = (struct mktPara *)data;
@@ -443,14 +438,26 @@ void objFunc(double *p, double *x, int m, int n, void *data) {
                             (int)mktp->VIX_K.size());
     double Nspx2root = std::sqrt(2 * SPXprices.size());
     double Nvix2root = std::sqrt(2 * VIXprices.size());
-    for (k = 0; k < (int)SPXprices.size(); k++) {
-        x[k] = (SPXprices[k] - mktp->mktPrices[k]) /
-               (mktp->mktPrices[k] * Nspx2root);
+    //for (k = 0; k < (int)SPXprices.size(); k++) {
+    //    x[k] = (SPXprices[k] - mktp->mktPrices[k]) /
+    //           (mktp->mktPrices[k] * Nspx2root);
+    //}
+    VD u = *gl.abs;
+    CD CFvols[30];
+    VD VIX_time = mktp->VIX_T;
+    double tbar = mktp->tbar;
+    double k = p[0];
+    double vbar = p[1];
+    double atauBar = (1.0 - FAST_EXP(-tbar * k)) / k;
+    for (int count = 0; count < 30; count++){
+        CD inputU = -u[count] * atauBar / tbar;
+        CFvols[count] = CFvol(inputU, molp, VIX_time[count]).CFvol;
     }
-    //k = 0;
-    for (int j = k; j < n; j++) {
-        x[j] = (VIXprices[j - k] - mktp->mktPrices[j]) /
-               (mktp->mktPrices[j] * Nvix2root);
+    kk = 0;
+    for (int j = kk; j < n; j++) {
+        x[j] = real(CFvols[j]);
+        //x[j] = (VIXprices[j - k] - mktp->mktPrices[j]) /
+        //       (mktp->mktPrices[j] * Nvix2root);
     }
 }
 
@@ -465,27 +472,37 @@ void JacFunc(double *p, double *jac, int m, int n, void *data) {
     //std::cout << std::endl;
     VD SPXjac =
         gradientSPXprice(molp, mktp->S, mktp->r, (int)mktp->SPX_T.size(),
-                         mktp->SPX_T, mktp->SPX_K);
+                       mktp->SPX_T, mktp->SPX_K);
     VD VIXjac = gradientVIXprice(molp, mktp->r, (int)mktp->VIX_T.size(),
                                  mktp->VIX_T, mktp->VIX_K, mktp->tbar);
 
     double Nspx2root = std::sqrt(2 * mktp->SPX_T.size());
     double Nvix2root = std::sqrt(2 * mktp->VIX_T.size());
     int k;
-    for (k = 0; k < (int)mktp->SPX_T.size(); k++) {
-        for (int j = 0; j < m; j++) {
-            jac[k * m + j] =
-                SPXjac[k * m + j] / (mktp->mktPrices[k] * Nspx2root);
-        }
-    }
-    //k = 0;
+    //for (k = 0; k < (int)mktp->SPX_T.size(); k++) {
+    //    for (int j = 0; j < m; j++) {
+    //        jac[k * m + j] =
+    //            SPXjac[k * m + j] / (mktp->mktPrices[k] * Nspx2root);
+    //    }
+    //}
+    VD u = *gl.abs;
+    VD VIX_time = mktp->VIX_T;
+    VD VIX_Str = mktp->VIX_K;
+    k = 0;
     for (int l = k; l < n; l++) {
-        for (int j = 0; j < m; j++) {
-            jac[l * m + j] =
-                VIXjac[(l - k) * m + j] / (mktp->mktPrices[l] * Nvix2root);
-        }
+        VD grads = gradVIXintegrand(u[l], molp, VIX_time[l], VIX_Str[l], mktp->tbar);
+        jac[l*m+0] = grads[0];
+        jac[l*m+1] = grads[1];
+        jac[l*m+2] = grads[2];
+        jac[l*m+3] = grads[3];
+        jac[l*m+4] = grads[4];
+        //for (int j = 0; j < m; j++) {
+        //    jac[l * m + j] =
+        //        VIXjac[(l - k) * m + j] / (mktp->mktPrices[l] * Nvix2root);
+        //}
     }
 }
+
 
 // CF of price, stock option pircing, and gradient of stock option price
 CFPriceData CFprice(CD u, modelPara p, double tau, double S, double r) {
@@ -747,17 +764,18 @@ VD gradVIXintegrand(CD u, modelPara p, double tau, double K, double tbar) {
     CD iuOverTbar = inter.iu / tbar;
 
     CD G_sigma = -2.0 * p.sigma * iU / p.k * std::sinh(tmp2);// equation (3.35)
-
+    //New
+    //CD G_k = tau * 0.5 * tmp3 + var * iU * std::sinh(tmp2) / std::pow(p.k, 2) - var * tau * iU * std::cosh(tmp2) / (2 * p.k);
+    //end new
     CD h_v0 = inter.F / p.v0;//Eq 3.14a
     CD h_vbar = tmp1 * FAST_LOG(tmp3 / inter.G);//Eq 3.14b
     CD h_sigma = -2.0 * p.vbar / p.sigma * h_vbar -
                  tmp1 * p.vbar / inter.G * G_sigma -
                  p.v0 * iU / (tmp4 * tmp3) * G_sigma;//Eq 3.14c
-    CD h_k = -p.sigma / (2.0 * p.k) * h_sigma +
-             p.vbar * tau * iU / (inter.G * tmp3) -
-             p.v0 * inter.inputU * tau / (2.0 * p.k * tmp4) *
+    CD h_k = -p.sigma / (2.0 * p.k) * h_sigma + p.vbar * tau * iU / (inter.G * tmp3)
+             - p.v0 * inter.inputU * tau / (2.0 * p.k * tmp4) *
              (2.0 * p.k * i + inter.inputU * var);//Eq 3.14d
-
+    //CD h_k = 2.0 * p.vbar/var * FAST_LOG(tmp3/inter.G) + p.k * p.vbar * tau/var - p.v0*iU*G_k/(tmp4 * tmp3) - p.v0*iU*tau/(2.0 * inter.G * tmp3) - 2.0*p.k*p.vbar*G_k/(inter.G * var);
     // equation (3.16)
     double atauBar_k = (tbar - inter.atauBar * (p.k * tbar + 1)) / p.k;//Eq 3.16a
     double btauBar_vbar = tbar - inter.atauBar;//Eq 3.16b
@@ -767,19 +785,24 @@ VD gradVIXintegrand(CD u, modelPara p, double tau, double K, double tbar) {
     CD hPrime = h_k - u / tbar * (inter.F / inter.inputU - 1.0 / inter.G *
                 (tmp1 * p.vbar + inter.F) * G_U) * atauBar_k;//Eq 3.24
 
-    CD H_vbar = h_vbar - iuOverTbar * btauBar_vbar;// equation (3.29)
-    CD H_k = hPrime - iuOverTbar * btauBar_k;// equation (3.29)
+    //CD H_vbar = h_vbar - iuOverTbar * btauBar_vbar;// equation (3.29)
+    //CD H_k = hPrime - iuOverTbar * btauBar_k;// equation (3.29)
 
     VD ret;
     ret.reserve(5);
 
-    //integrand of equation (3.28)
-    ret.push_back(real(H_k * inter.rawVIXint));
-    ret.push_back(real(H_vbar * inter.rawVIXint));
-    ret.push_back(real(h_v0 * inter.rawVIXint));
+    ////integrand of equation (3.28)
+    //ret.push_back(real(H_k * inter.rawVIXint));
+    //ret.push_back(real(H_vbar * inter.rawVIXint));
+    //ret.push_back(real(h_v0 * inter.rawVIXint));
+    //ret.push_back(0.0);
+    //ret.push_back(real(h_sigma * inter.rawVIXint));
+    CD CF = std::pow(FAST_EXP(tmp2) / inter.G, 2 * p.k * p.vbar / var) * std::exp(inter.F);//Eq 3.32
+    ret.push_back(real(hPrime*CF));
+    ret.push_back(real(h_vbar*CF));
+    ret.push_back(real(h_v0*CF));
     ret.push_back(0.0);
-    ret.push_back(real(h_sigma * inter.rawVIXint));
-
+    ret.push_back(real(h_sigma*CF));
     return ret;
 }
 
