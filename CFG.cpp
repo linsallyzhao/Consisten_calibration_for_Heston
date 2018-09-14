@@ -126,8 +126,13 @@ static VD w128 = {0.0244461801962625182113259, 0.0244315690978500450548486,
 
 typedef std::complex<double> CD;
 CD one(1.0, 0.0), zero(0.0, 0.0), two(2.0, 0.0), i(0.0, 1.0);
-const double pi = 4.0 * atan(1.0), lb = 0.0, ub = 200, mid = 0.5 * (ub + lb),
-             halfRange = 0.5 * (ub - lb);
+const double pi = 4.0 * atan(1.0), lb = 0.0, ub = 200.0, mid = 0.5 * (ub + lb),
+             halfRange = 0.5 * (ub - lb), lbVIXprice = -100.0, ubVIXprice = 100.0,
+             midVIXprice = 0.5 * (ubVIXprice + lbVIXprice),
+             halfRangeVIXprice = 0.5 * (ubVIXprice - lbVIXprice),
+             lbVIXgrad = -300.0, ubVIXgrad = 300.0,
+             midVIXgrad = 0.5 * (ubVIXgrad + lbVIXgrad),
+             halfRangeVIXgrad = 0.5 * (ubVIXgrad - lbVIXgrad);
 
 struct GLsetting {
     int nGrid;
@@ -219,6 +224,7 @@ void printIntegrandVIXoption(modelPara p, double tau, double K, double tbar,
 void printVIXcalls(modelPara p, VD tau, double tbar, VD K, double r, int n);
 void printSPXgradient(modelPara p, double S, double r, int n, VD tau, VD K);
 void printVIXgradient(modelPara p, double tbar, double r, int n, VD tau, VD K);
+void printgradVIXintegrand(modelPara p, double tau, double K, double tbar, int n);
 
 
 const double St = 100.0;
@@ -416,12 +422,14 @@ int main() {
     }
 
 
+    //modelPara mp = {3.0, 0.1, 0.08, -0.8, 0.25};
     //showSPXcallPrices(mp, SPXtarr, S, SPXkarr, r, (int)SPXkarr.size());
     //printSPXgradient(mp, S, r, (int)SPXkarr.size(), SPXtarr, SPXkarr);
     //printCFvol(mp, VIXtarr[1], gl.nGrid>>1);
-    //printIntegrandVIXoption(mp, VIXtarr[5], VIXkarr[5], tbar, gl.nGrid>>1);
+    //printIntegrandVIXoption(mp, VIXtarr[0], VIXkarr[0], tbar, gl.nGrid>>1);
     //printVIXcalls(mp, VIXtarr, tbar, VIXkarr, r, (int)VIXkarr.size());
     //printVIXgradient(mp, tbar, r, (int)VIXkarr.size(), VIXtarr, VIXkarr);
+    //printgradVIXintegrand(mp, VIXtarr[0], VIXkarr[0], tbar, gl.nGrid>>1);
 }
 
 // Functions to keep
@@ -442,18 +450,9 @@ void objFunc(double *p, double *x, int m, int n, void *data) {
     //    x[k] = (SPXprices[k] - mktp->mktPrices[k]) /
     //           (mktp->mktPrices[k] * Nspx2root);
     //}
-    VD u = *gl.abs;
-    double integrands[30];
-    VD VIX_time = mktp->VIX_T;
-    VD VIX_Str = mktp->VIX_K;
-    double tbar = mktp->tbar;
-    for (int count = 0; count < 30; count++){
-        double up_u = mid + u[count] * halfRange;
-        integrands[count] = VIXintegrand(up_u + 2.0*i, molp, VIX_time[count], VIX_Str[count], tbar).VIXint;
-    }
     kk = 0;
     for (int j = kk; j < n; j++) {
-        x[j] = integrands[j];
+        x[j] = VIXprices[j];
         //x[j] = (VIXprices[j - k] - mktp->mktPrices[j]) /
         //       (mktp->mktPrices[j] * Nvix2root);
     }
@@ -483,22 +482,13 @@ void JacFunc(double *p, double *jac, int m, int n, void *data) {
     //            SPXjac[k * m + j] / (mktp->mktPrices[k] * Nspx2root);
     //    }
     //}
-    VD u = *gl.abs;
-    VD VIX_time = mktp->VIX_T;
-    VD VIX_Str = mktp->VIX_K;
     k = 0;
     for (int l = k; l < n; l++) {
-        double up_u = mid + u[l] * halfRange;
-        VD grads = gradVIXintegrand(up_u + 2.0*i, molp, VIX_time[l], VIX_Str[l], mktp->tbar);
-        jac[l*m+0] = grads[0];
-        jac[l*m+1] = grads[1];
-        jac[l*m+2] = grads[2];
-        jac[l*m+3] = grads[3];
-        jac[l*m+4] = grads[4];
-        //for (int j = 0; j < m; j++) {
+        for (int j = 0; j < m; j++) {
+            jac[l*m+j] = VIXjac[l*m+j];
         //    jac[l * m + j] =
         //        VIXjac[(l - k) * m + j] / (mktp->mktPrices[l] * Nvix2root);
-        //}
+        }
     }
 }
 
@@ -735,18 +725,19 @@ VD VIXprice(modelPara p, VD tau, double tbar, VD K, double r, int n) {
         discount = std::exp(-r * T);
         glCollect = 0.0;
         for (int count = 0; count < nGrid; count++) {//This loop does integration
-            up_u = mid + u[count] * halfRange;
-            down_u = mid - u[count] * halfRange;
-            upInt = VIXintegrand(up_u + 2.0*i, p, T, strike, tbar).VIXint;
+            up_u = midVIXprice + u[count] * halfRangeVIXprice;
+            down_u = midVIXprice - u[count] * halfRangeVIXprice;
+            upInt = VIXintegrand(up_u + 5.0*i, p, T, strike, tbar).VIXint;
                                // What should be the complex part be? By adding
                               // this magic number I already made the price
                               // positive, but how to choose the complex part?
-            downInt = VIXintegrand(down_u + 2.0*i, p, T, strike, tbar).VIXint;
+            downInt = VIXintegrand(down_u + 5.0*i, p, T, strike, tbar).VIXint;
             glCollect += w[count] * (upInt + downInt);
         }
 
-        glInt = halfRange * glCollect;//integral
-        VIXcall = S0 * discount / (2.0 *std::sqrt(pi)) * glInt; //Eq 3.14
+        glInt = halfRangeVIXprice * glCollect;//integral
+        //VIXcall = S0 * discount / (2.0 *std::sqrt(pi)) * glInt; //Eq 3.14
+        VIXcall = glInt;
         VIXs.push_back(VIXcall);
     }
     return VIXs;
@@ -824,18 +815,21 @@ VD gradientVIXprice(modelPara p, double r, int n, VD tau, VD K, double tbar) {
         strike = K[l];
         T = tau[l];
         discount = std::exp(-r * T);
-        for (int cc = 0; cc < 5; cc++) glCollect[cc] = 0.0;
+        for (int cc = 0; cc < 5; cc++) {
+            glCollect[cc] = 0.0;
+        }
         for (int count = 0; count < nGrid; count++) {//integration in Eq 3.28
-            up_u = mid + u[count] * halfRange;
-            down_u = mid - u[count] * halfRange;
-            upInt = gradVIXintegrand(up_u + 2.0*i, p, T, strike, tbar);
-            downInt = gradVIXintegrand(down_u + 2.0*i, p, T, strike, tbar);
+            up_u = midVIXgrad + u[count] * halfRangeVIXgrad;
+            down_u = midVIXgrad - u[count] * halfRangeVIXgrad;
+            upInt = gradVIXintegrand(up_u + 5.0*i, p, T, strike, tbar);
+            downInt = gradVIXintegrand(down_u + 5.0*i, p, T, strike, tbar);
             for (int j = 0; j < 5; j++)
                 glCollect[j] += w[count] * (upInt[j] + downInt[j]);
         }
         for (int p = 0; p < 5; p++) {
-            glCollect[p] = glCollect[p] * halfRange; //integral in Eq 3.28
-            gradVIX.push_back(fixedPart * discount * glCollect[p]); //gradients of VIX price
+            glCollect[p] = glCollect[p] * halfRangeVIXgrad; //integral in Eq 3.28
+            //gradVIX.push_back(fixedPart * discount * glCollect[p]); //gradients of VIX price
+            gradVIX.push_back(glCollect[p]);
         }
     }
 
@@ -901,5 +895,16 @@ void printIntegrandVIXoption(modelPara p, double tau, double K, double tbar,
         //std::cout << "u " << u[j] << ", ";
         VIXint = VIXintegrand(u[j], p, tau, K, tbar).VIXint;
         std::cout << "VIXintegrand" << j << "  " << VIXint << std::endl;
+    }
+}
+void printgradVIXintegrand(modelPara p, double tau, double K, double tbar, int n){
+    VD u = *gl.abs;
+    VD result;
+    for (int j = 0; j < n; j++){
+        std::cout << std::setprecision(16);
+        result = gradVIXintegrand(u[j], p, tau, K, tbar);
+        for (int cc = 0; cc < 5; cc++){
+            std::cout << result[cc] << std::endl;
+        }
     }
 }
