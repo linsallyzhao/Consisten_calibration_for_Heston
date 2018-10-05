@@ -154,19 +154,16 @@ void printVIXgradient(modelPara p, double tbar, double r, int n, VD tau, VD K);
 
 int main() {
     // These are manully calculated according to the SPXtarr and VIXtarr
-    VD allT = {0.0,        0.01917808, 0.03835616, 0.05753425, 0.08219178,
-               0.10136986, 0.12054795, 0.13972603, 0.16438356, 0.24657534,
-               0.32876712, 0.4109589,  0.49315068, 0.73972603, 0.98630137};
+    VD allT = {0.0, 0.08219178, 0.16438356, 0.24657534, 0.32876712, 0.4109589,
+                0.49315068, 0.73972603, 0.98630137};
 
     // These are uniform random (0, 1.4) generated
     VD disStar = {1.46371706e-04, 4.31183274e-04, 7.89958945e-04, 2.91974407e-04,
-       8.57045896e-05, 5.48371267e-04, 4.84620007e-04, 3.51856480e-04,
-       7.00281831e-04, 7.14263885e-04, 7.51713276e-04, 6.58928904e-04,
-       4.95814626e-04, 6.67154021e-04};
+       8.57045896e-05, 5.48371267e-04, 4.84620007e-04, 3.51856480e-04};
 
     std::vector<intI> disArr;
 
-    for (int j = 0; j < 14; j++) {
+    for (int j = 0; j < 8; j++) {
         disArr.push_back({allT[j], allT[j + 1], disStar[j]});
     }
 
@@ -214,31 +211,24 @@ int main() {
 
     //
     VD SPXprices = SPXprice(mp, SPXtarr, S, SPXkarr, r, (int)SPXkarr.size());
-    VD VIXprices = VIXprice(mp, VIXtarr, S, VIXkarr, r, (int)VIXkarr.size());
-    VD optPrices;
-    optPrices.reserve(SPXprices.size() + VIXprices.size());
-    optPrices.insert(optPrices.end(), SPXprices.begin(), SPXprices.end());
-    optPrices.insert(optPrices.end(), VIXprices.begin(), VIXprices.end());
 
     std::vector<intI> toCali;
 
-    for (int j = 0; j < 14; j++) {
+    for (int j = 0; j < 8; j++) {
         toCali.push_back({allT[j], allT[j + 1], 0.0});
     }
-    mktPara marP = {S, r, SPXtarr, SPXkarr, VIXtarr, VIXkarr, optPrices,
+    mktPara marP = {S, r, SPXtarr, SPXkarr, VIXtarr, VIXkarr, SPXprices,
     tbar, toCali};
-    //mktPara marP = {S, r, SPXtarr, SPXkarr, VIXtarr, VIXkarr, optPrices,
-    //tbar, disArr};
 
 
-    VD disInitial = {5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0};
-    double p[19];
+    VD disInitial = {5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0};
+    double p[13];
     // Initial 1
-    p[0] = 1.2000;
-    p[1] = 0.20000;
-    p[2] = 0.2000;
-    p[3] = -0.6000;
-    p[4] = 0.3000;
+    //p[0] = 1.2000;
+    //p[1] = 0.20000;
+    //p[2] = 0.2000;
+    //p[3] = -0.6000;
+    //p[4] = 0.3000;
 
     // Initial 2
     //p[0] = 1.2000;
@@ -248,22 +238,22 @@ int main() {
     //p[4] = 0.2000;
 
     // Initial 3
-    //p[0] = 1.4000;
-    //p[1] = 0.40000;
-    //p[2] = 0.4000;
-    //p[3] = -0.7000;
-    //p[4] = 0.2000;
-    for(int fill = 0; fill < 14; fill++){
+    p[0] = 1.4000;
+    p[1] = 0.40000;
+    p[2] = 0.4000;
+    p[3] = -0.7000;
+    p[4] = 0.2000;
+    for(int fill = 0; fill < 8; fill++){
         p[fill+5] = disInitial[fill] * 0.0001;
     }
 
     double opts[LM_OPTS_SZ], info[LM_INFO_SZ];
-    opts[0] = LM_INIT_MU * 100;
+    opts[0] = LM_INIT_MU;
     // stopping thresholds for
     opts[1] = 1E-10;          // ||J^T e||_inf
     opts[2] = 1E-300;          // ||Dp||_2
     opts[3] = 1E-10;          // ||e||_2
-    opts[4] = LM_DIFF_DELTA;  // finite difference if used
+    opts[4] = -LM_DIFF_DELTA;  // finite difference if used
 
     std::cout <<
     "\r-------- -------- -------- Heston Model Calibrator-------- -------- --------"
@@ -272,38 +262,41 @@ int main() {
     std::cout <<
     "Parameters:" << "\t      kappa"<<"\t     vinf"<< "\t       v0"<<"\t      rho"
     <<"\t       vov"<<"\t       I1"<< "\t       I2"<< "\t       I3"<< "\t       I4"
-    <<"\t       I5"<<"\t       I6"<<"\t       I7"<<"\t       I8"<<"\t       I9"
-    <<"\t       I10"<<"\t       I11"<<"\t       I12"<<"\t       I13"<<"\t       I14"
+    <<"\t       I5"<<"\t       I6"<<"\t       I7"<<"\t       I8"
     <<std::endl;
 
     std::cout << "\r Initial point:" << "\t"  << std::scientific
     << std::setprecision(8) << p[0]<< "\t" << p[1]<< "\t"<< p[2]<< "\t"<< p[3]
     << "\t"<< p[4] << "\t" << p[5]<< "\t" << p[6]<< "\t"<< p[7]<< "\t"<< p[8]
-    << "\t"<< p[9] << "\t" << p[10]<< "\t" << p[11]<< "\t"<< p[12]<< "\t"<< p[13]
-    << "\t"<< p[14] << "\t" << p[15]<< "\t" << p[16]<< "\t"<< p[17]<< "\t"<< p[18]
+    << "\t"<< p[9] << "\t" << p[10]<< "\t" << p[11]<< "\t"<< p[12]<< "\t"
     << std::endl;
 
     double start_s = clock();
-    dlevmar_der(objFunc, JacFunc, p, NULL, 19, (int)optPrices.size(), 30000,
+    //double err[40] = {-1};
+    //dlevmar_chkjac(objFunc, JacFunc, p, 13, 40, (void *)&marP, err);
+    //for (int cer = 0; cer < 40; cer++){
+    //    std::cerr << err[cer] << ",";
+    //}
+    //std::cerr << std::endl;
+
+    dlevmar_der(objFunc, JacFunc, p, NULL, 13, 40, 30000,
     opts, info, NULL, NULL, (void *) &marP);
-    //dlevmar_dif(objFunc, p, NULL, 19, (int)optPrices.size(), 30000,
+    //dlevmar_dif(objFunc, p, NULL, 13, 40, 30000,
     //opts, info, NULL, NULL, (void *) &marP);
     double stop_s = clock();
 
     std::cout << "Optimum found:" << std::scientific << std::setprecision(8)
     << "\t"<< p[0]<< "\t" << p[1]<< "\t"<< p[2]<< "\t"<< p[3]<< "\t"<< p[4]
     << "\t" << p[5]<< "\t" << p[6]<< "\t"<< p[7]<< "\t"<< p[8]
-    << "\t"<< p[9] << "\t" << p[10]<< "\t" << p[11]<< "\t"<< p[12]<< "\t"<< p[13]
-    << "\t"<< p[14] << "\t" << p[15]<< "\t" << p[16]<< "\t"<< p[17]<< "\t"<< p[18]
+    << "\t"<< p[9] << "\t" << p[10]<< "\t" << p[11]<< "\t"<< p[12]<< "\t"
     << std::endl;
 
     std::cout << "Real optimum:" << "\t" << mp.k<<"\t"<< mp.vbar
-    << "\t"<< mp.v0<< "\t"<< mp.rho<< "\t"<< mp.sigma << disStar[0]
+    << "\t"<< mp.v0<< "\t"<< mp.rho<< "\t"<< mp.sigma << "\t" << disStar[0]
     << "\t"<< disStar[1]<< "\t"<< disStar[2]<< "\t"<< disStar[3]
     << "\t"<< disStar[4]<< "\t"<< disStar[5]<< "\t"<< disStar[6]
-    << "\t"<< disStar[7]<< "\t"<< disStar[8]<< "\t"<< disStar[9]
-    << "\t"<< disStar[10]<< "\t"<< disStar[11]<< "\t"<< disStar[12]
-    << "\t"<< disStar[13] << std::endl;
+    << "\t"<< disStar[7]<< "\t"<< disStar[8]
+    << std::endl;
 
 
     if (int(info[6]) == 6) {
@@ -370,7 +363,7 @@ void objFunc(double *p, double *x, int m, int n, void *data) {
     mktp = (struct mktPara *)data;
     std::vector<intI> toCali = mktp->toCali;
 
-    for(int count = 0; count < 14; count++){
+    for(int count = 0; count < 8; count++){
         toCali[count].inte = p[count+5];
     }
     //for(int print = 0; print < 14; print++){
@@ -379,17 +372,10 @@ void objFunc(double *p, double *x, int m, int n, void *data) {
     modelPara molp = {p[0], p[1], p[2], p[3], p[4], toCali};
     VD SPXprices = SPXprice(molp, mktp->SPX_T, mktp->S, mktp->SPX_K, mktp->r,
                             (int)mktp->SPX_T.size());
-    VD VIXprices = VIXprice(molp, mktp->VIX_T, mktp->S, mktp->VIX_K, mktp->r,
-                            (int)mktp->VIX_K.size());
     double Nspx2root = sqrt(2 * SPXprices.size());
-    double Nvix2root = sqrt(2 * VIXprices.size());
     for (k = 0; k < (int)SPXprices.size(); k++) {
         x[k] = (SPXprices[k] - mktp->mktPrices[k]) /
                (mktp->mktPrices[k] * Nspx2root);
-    }
-    for (int j = k; j < n; j++) {
-        x[j] = (VIXprices[j - k] - mktp->mktPrices[j]) /
-               (mktp->mktPrices[j] * Nvix2root);
     }
 }
 
@@ -398,7 +384,7 @@ void JacFunc(double *p, double *jac, int m, int n, void *data) {
     mktp = (struct mktPara *)data;
     std::vector<intI> toCali = mktp->toCali;
 
-    for(int count = 0; count < 14; count++){
+    for(int count = 0; count < 8; count++){
         toCali[count].inte = p[count+5];
     }
     //for(int print = 0; print < 14; print++){
@@ -409,21 +395,12 @@ void JacFunc(double *p, double *jac, int m, int n, void *data) {
     VD SPXjac =
         gradientSPXprice(molp, mktp->S, mktp->r, (int)mktp->SPX_T.size(),
                          mktp->SPX_T, mktp->SPX_K);
-    VD VIXjac = gradientVIXprice(molp, mktp->r, (int)mktp->VIX_T.size(),
-                                 mktp->VIX_T, mktp->VIX_K, mktp->tbar);
     double Nspx2root = sqrt(2 * mktp->SPX_T.size());
-    double Nvix2root = sqrt(2 * mktp->VIX_T.size());
     int k;
     for (k = 0; k < (int)mktp->SPX_T.size(); k++) {
         for (int j = 0; j < m; j++) {
             jac[k * m + j] =
                 SPXjac[k * m + j] / (mktp->mktPrices[k] * Nspx2root);
-        }
-    }
-    for (int l = k; l < n; l++) {
-        for (int j = 0; j < m; j++) {
-            jac[l * m + j] =
-                VIXjac[(l - k) * m + j] / (mktp->mktPrices[l] * Nvix2root);
         }
     }
 }
@@ -462,7 +439,7 @@ double SPXintegrand(double u, modelPara p, double tau, double K, double S,
     do {
         Iphi += p.disArr.at(count).inte;
         count++;
-    } while (count < 14 && p.disArr.at(count).end <= tau);
+    } while (count < 8 && p.disArr.at(count).end <= tau);
 
     CD integrand1 = exp(iu * kappa - i * inputU * (x + rT));
     CFPriceData tmp = CFprice(inputU, p, tau, S, r);
@@ -572,7 +549,7 @@ VD gradSPXintgrand(double u, modelPara p, double tau, double K, double S,
     do {
         Iphi += p.disArr.at(count).inte;
         count++;
-    } while (count < 14 && p.disArr.at(count).end <= tau);
+    } while (count < 8 && p.disArr.at(count).end <= tau);
     double integrand3 = exp(-integrand2 * Iphi);
 
     gradSPXint.push_back(real(integrand1 * kPar) * integrand3 / integrand2);
@@ -585,7 +562,7 @@ VD gradSPXintgrand(double u, modelPara p, double tau, double K, double S,
     for (int new_count = 0; new_count < count; new_count++) {
         gradSPXint.push_back(IphiDer);
     }
-    int to_fill = 19 - (int)gradSPXint.size();
+    int to_fill = 13 - (int)gradSPXint.size();
     if (to_fill > 0) {  // this is test necessary
         for (int fill = 0; fill < to_fill; fill++) {
             gradSPXint.push_back(0.0);
@@ -601,15 +578,15 @@ VD gradientSPXprice(modelPara p, double S, double r, int n, VD tau, VD K) {
     VD w = *gl.weights;
 
     VD gradSPX, upInt, downInt, glCollect;
-    gradSPX.reserve(19 * n);
-    glCollect.reserve(19);
+    gradSPX.reserve(13 * n);
+    glCollect.reserve(13);
 
     double strike, T, rT, up_u, down_u;
     for (int l = 0; l < n; l++) {
         strike = K[l];
         T = tau[l];
         rT = r * T;
-        for (int cc = 0; cc < 19; cc++) {
+        for (int cc = 0; cc < 13; cc++) {
             glCollect[cc] = 0.0;
         }  // There must be a better way
         for (int count = 0; count < nGrid; count++) {
@@ -617,10 +594,10 @@ VD gradientSPXprice(modelPara p, double S, double r, int n, VD tau, VD K) {
             down_u = mid - u[count] * halfRange;
             upInt = gradSPXintgrand(up_u, p, T, strike, S, r);
             downInt = gradSPXintgrand(down_u, p, T, strike, S, r);
-            for (int j = 0; j < 19; j++)
+            for (int j = 0; j < 13; j++)
                 glCollect[j] += w[count] * (upInt[j] + downInt[j]);
         }
-        for (int p = 0; p < 19; p++) {
+        for (int p = 0; p < 13; p++) {
             glCollect[p] = glCollect[p] * halfRange;
             gradSPX.push_back(-sqrt(strike * S) * FAST_EXP(-rT * 0.5) / pi *
                               glCollect[p]);
