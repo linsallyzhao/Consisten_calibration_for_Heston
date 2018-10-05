@@ -127,10 +127,10 @@ static VD w128 = {0.0244461801962625182113259, 0.0244315690978500450548486,
 typedef std::complex<double> CD;
 CD one(1.0, 0.0), zero(0.0, 0.0), two(2.0, 0.0), i(0.0, 1.0);
 const double pi = 4.0 * atan(1.0), lb = 0.0, ub = 200.0, mid = 0.5 * (ub + lb),
-             halfRange = 0.5 * (ub - lb), lbVIXprice = -100.0, ubVIXprice = 100.0,
+             halfRange = 0.5 * (ub - lb), lbVIXprice = 0.0, ubVIXprice = 600.0,
              midVIXprice = 0.5 * (ubVIXprice + lbVIXprice),
              halfRangeVIXprice = 0.5 * (ubVIXprice - lbVIXprice),
-             lbVIXgrad = -300.0, ubVIXgrad = 300.0,
+             lbVIXgrad = 0.0, ubVIXgrad = 600.0,
              midVIXgrad = 0.5 * (ubVIXgrad + lbVIXgrad),
              halfRangeVIXgrad = 0.5 * (ubVIXgrad - lbVIXgrad);
 
@@ -312,15 +312,15 @@ int main() {
         0.08219178, 0.16438356, 0.24657534, 0.32876712, 0.4109589,  0.49315068,
         };
 
-    //std::ofstream output;
-    //output.open("HestonCalibration");
-    //output << std::setprecision(16) << std::scientific;
-    //output << "Ik,Ivbar,Iv0,Irho,Isigma,Ok,Rk,Ovbar,Rvbar,Ov0,Rv0,Orho,Rrho,Osigma,Rsigma,stopped_by,time,iteration,pv,jac,lin_sys,e0,e*,Je,Dp,count"<< std::endl;
+    std::ofstream output;
+    output.open("HestonCalibration_single");
+    output << std::setprecision(16) << std::scientific;
+    output << "Ik,Ivbar,Iv0,Irho,Isigma,Ok,Rk,Ovbar,Rvbar,Ov0,Rv0,Orho,Rrho,Osigma,Rsigma,stopped_by,time,iteration,pv,jac,lin_sys,e0,e*,Je,Dp,count,count2,count7"<< std::endl;
 
     std::cout << std::setprecision(16) << std::scientific;
 
 
-    std::default_random_engine generator;
+    std::default_random_engine generator(1);
     std::uniform_real_distribution<double> distri(0.0, 1.0);
 
 
@@ -364,7 +364,7 @@ int main() {
         opts[1] = 1E-10;          // ||J^T e||_inf
         opts[2] = 1E-10;          // ||Dp||_2
         opts[3] = 1E-10;          // ||e||_2
-        opts[4] = LM_DIFF_DELTA;  // finite difference if used
+        opts[4] = -LM_DIFF_DELTA;  // finite difference if used
         int count = 0;
         int countSmallDp = 0;
         int count7 = 0;
@@ -391,11 +391,9 @@ int main() {
             //std::cerr << std::endl;
 
 
-            //dlevmar_der(objFunc, JacFunc, p, NULL, 5, (int)optPrices.size(), 300, opts,
-            //            info, NULL, NULL, (void *)&marP);
             dlevmar_der(objFunc, JacFunc, p, NULL, 5, 30, 300, opts,
                         info, NULL, NULL, (void *)&marP);
-            //dlevmar_dif(objFunc, p, NULL, 5, (int)optPrices.size(), 300, opts,
+            //dlevmar_dif(objFunc, p, NULL, 5, 30, 300, opts,
             //            info, NULL, NULL, (void *)&marP);
             count++;
             if ((int(info[6]) == 2)){
@@ -408,16 +406,16 @@ int main() {
         }while((int(info[6]) == 2 || int(info[6]) == 7) && count < 100);
         double stop_s = clock();
 
-        std::cout << "Ik,Ivbar,Iv0,Irho,Isigma,Ok,Rk,Ovbar,Rvbar,Ov0,Rv0,Orho,Rrho,Osigma,Rsigma,stopped_by,time,iteration,pv,jac,lin_sys,e0,e*,Je,Dp,count,count2,count7"<< std::endl;
-        std::cout << Ik << "," << Ivbar << "," << Iv0 << "," << Irho << "," << Isigma << ",";
-        std::cout << p[0] << "," << k << "," << p[1] << "," << vbar << ","
+        //std::cout << "Ik,Ivbar,Iv0,Irho,Isigma,Ok,Rk,Ovbar,Rvbar,Ov0,Rv0,Orho,Rrho,Osigma,Rsigma,stopped_by,time,iteration,pv,jac,lin_sys,e0,e*,Je,Dp,count,count2,count7"<< std::endl;
+        output << Ik << "," << Ivbar << "," << Iv0 << "," << Irho << "," << Isigma << ",";
+        output << p[0] << "," << k << "," << p[1] << "," << vbar << ","
                << p[2] << "," << v0 << "," << p[3] << "," << rho << ","
                << p[4] << "," << sigma << ",";
-        std::cout << int(info[6]) << ",";
-        std::cout << double(stop_s - start_s) / CLOCKS_PER_SEC << ",";
-        std::cout << int(info[5]) << "," << int(info[7]) << "," << int(info[8]) << ","
+        output << int(info[6]) << ",";
+        output << double(stop_s - start_s) / CLOCKS_PER_SEC << ",";
+        output << int(info[5]) << "," << int(info[7]) << "," << int(info[8]) << ","
                << int(info[9]) << ",";
-        std::cout << info[0] << "," << info[1] << "," << info[2] << "," << info[3] << ","
+        output << info[0] << "," << info[1] << "," << info[2] << "," << info[3] << ","
                << count << "," << countSmallDp << "," << count7 << std::endl;
     }
 
@@ -450,9 +448,49 @@ void objFunc(double *p, double *x, int m, int n, void *data) {
     //    x[k] = (SPXprices[k] - mktp->mktPrices[k]) /
     //           (mktp->mktPrices[k] * Nspx2root);
     //}
+
+    //for gradient of CFvol 1
+    /////////////////////////////////////////////////////////////
+    VD u = *gl.abs;
+    CD CFvols[30];
+    VD VIX_time = mktp->VIX_T;
+    double tbar = mktp->tbar;
+    double k = p[0];
+    double vbar = p[1];
+    double atauBar = (1.0 - FAST_EXP(-tbar * k)) / k;
+    for (int count = 0; count < 30; count++){
+        CD inputU = -u[count] * atauBar / tbar;
+        CFvols[count] = CFvol(inputU, molp, VIX_time[count]).CFvol;
+    }
+    /////////////////////////////////////////////////////////////
+
+    //for gradient of integrand A
+    /////////////////////////////////////////////////////////////
+    //VD u = *gl.abs;
+    //double integrands[30];
+    //VD VIX_time = mktp->VIX_T;
+    //VD VIX_Str = mktp->VIX_K;
+    //double tbar = mktp->tbar;
+    //for (int count = 0; count < 30; count++){
+    //    double up_u = midVIXgrad + u[count] * halfRangeVIXgrad;
+    //    integrands[count] = VIXintegrand(up_u + 5.0*i, molp, VIX_time[count], VIX_Str[count], tbar).VIXint;
+    //}
+    /////////////////////////////////////////////////////////////
     kk = 0;
     for (int j = kk; j < n; j++) {
-        x[j] = VIXprices[j];
+        //for gradient of CFvol 2
+        /////////////////////////////////////////////////////////////
+        x[j] = real(CFvols[j]);
+        /////////////////////////////////////////////////////////////
+        //for gradient of VIX pricing a
+        ////////////////////////////////////////////////////////////
+        //x[j] = (VIXprices[j - kk] - mktp->mktPrices[30+j]);
+        ////////////////////////////////////////////////////////////
+
+        //for gradient of integrand B
+        /////////////////////////////////////////////////////////////
+        //x[j] = integrands[j];
+        /////////////////////////////////////////////////////////////
         //x[j] = (VIXprices[j - k] - mktp->mktPrices[j]) /
         //       (mktp->mktPrices[j] * Nvix2root);
     }
@@ -482,13 +520,52 @@ void JacFunc(double *p, double *jac, int m, int n, void *data) {
     //            SPXjac[k * m + j] / (mktp->mktPrices[k] * Nspx2root);
     //    }
     //}
+
+    //for gradient of CFvol 3
+    /////////////////////////////////////////////////////////////
+    VD u = *gl.abs;
+    VD VIX_time = mktp->VIX_T;
+    VD VIX_Str = mktp->VIX_K;
+    /////////////////////////////////////////////////////////////
+
+    //for gradient of integrand C
+    /////////////////////////////////////////////////////////////
+    //VD u = *gl.abs;
+    //VD VIX_time = mktp->VIX_T;
+    //VD VIX_Str = mktp->VIX_K;
+    /////////////////////////////////////////////////////////////
     k = 0;
     for (int l = k; l < n; l++) {
-        for (int j = 0; j < m; j++) {
-            jac[l*m+j] = VIXjac[l*m+j];
+        //for gradient of CFvol 4
+        /////////////////////////////////////////////////////////////
+        VD grads = gradVIXintegrand(u[l], molp, VIX_time[l], VIX_Str[l], mktp->tbar);
+        jac[l*m+0] = grads[0];
+        jac[l*m+1] = grads[1];
+        jac[l*m+2] = grads[2];
+        jac[l*m+3] = grads[3];
+        jac[l*m+4] = grads[4];
+        /////////////////////////////////////////////////////////////
+
+        //for gradient of VIX pricing b
+        /////////////////////////////////////////////////////////////
+        //for (int j = 0; j < m; j++) {
+        //    jac[l*m+j] = VIXjac[l*m+j];
+        //}
+        /////////////////////////////////////////////////////////////
+
+        //for gradient of integrand D
+        /////////////////////////////////////////////////////////////
+        //double up_u = midVIXgrad + u[l] * halfRangeVIXgrad;
+        //VD grads = gradVIXintegrand(up_u + 5.0*i, molp, VIX_time[l], VIX_Str[l], mktp->tbar);
+        //jac[l*m+0] = grads[0];
+        //jac[l*m+1] = grads[1];
+        //jac[l*m+2] = grads[2];
+        //jac[l*m+3] = grads[3];
+        //jac[l*m+4] = grads[4];
+        /////////////////////////////////////////////////////////////
         //    jac[l * m + j] =
         //        VIXjac[(l - k) * m + j] / (mktp->mktPrices[l] * Nvix2root);
-        }
+        //}
     }
 }
 
@@ -788,13 +865,15 @@ VD gradVIXintegrand(CD u, modelPara p, double tau, double K, double tbar) {
     ret.push_back(0.0);
     ret.push_back(real(h_sigma * inter.rawVIXint));
 
-    //test the ingradient of CFvol, equation(3.34)
-    //CD CF = std::pow(FAST_EXP(tmp2) / inter.G, 2 * p.k * p.vbar / var) * std::exp(inter.F);//Eq 3.32
-    //ret.push_back(real(hPrime*CF));
-    //ret.push_back(real(h_vbar*CF));
-    //ret.push_back(real(h_v0*CF));
-    //ret.push_back(0.0);
-    //ret.push_back(real(h_sigma*CF));
+    //for gradient of CFvol 5
+    /////////////////////////////////////////////////////////////
+    CD CF = std::pow(FAST_EXP(tmp2) / inter.G, 2 * p.k * p.vbar / var) * std::exp(inter.F);//Eq 3.32
+    ret[0] = (real(hPrime*CF));
+    ret[1] = (real(h_vbar*CF));
+    ret[2] = (real(h_v0*CF));
+    ret[3] = (0.0);
+    ret[4] = (real(h_sigma*CF));
+    /////////////////////////////////////////////////////////////
     return ret;
 }
 
@@ -902,9 +981,9 @@ void printgradVIXintegrand(modelPara p, double tau, double K, double tbar, int n
     VD result;
     for (int j = 0; j < n; j++){
         std::cout << std::setprecision(16);
-        result = gradVIXintegrand(u[j], p, tau, K, tbar);
+        result = gradVIXintegrand(u[j] + 5.0 * i, p, tau, K, tbar);
         for (int cc = 0; cc < 5; cc++){
-            std::cout << result[cc] << std::endl;
+            std::cout << result[cc] << ", ";
         }
     }
 }
