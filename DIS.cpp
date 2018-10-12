@@ -8,14 +8,16 @@
 #include <iomanip>
 #include <iostream>
 #include <vector>
+#include <random>
+#include <assert.h>
 
 // Pade approximant
-#define FAST_EXP vdt::fast_exp
-#define FAST_LOG vdt::fast_log
+//#define FAST_EXP vdt::fast_exp
+//#define FAST_LOG vdt::fast_log
 
 // Non-approximant
-//#define FAST_EXP exp
-//#define FAST_LOG log
+#define FAST_EXP exp
+#define FAST_LOG log
 
 typedef std::vector<double> VD;
 static VD x128 = {0.0122236989606157641980521,0.0366637909687334933302153,0.0610819696041395681037870,0.0854636405045154986364980,0.1097942311276437466729747,0.1340591994611877851175753,0.1582440427142249339974755,0.1823343059853371824103826,0.2063155909020792171540580,0.2301735642266599864109866,0.2538939664226943208556180,0.2774626201779044028062316,0.3008654388776772026671541,0.3240884350244133751832523,0.3471177285976355084261628,0.3699395553498590266165917,0.3925402750332674427356482,0.4149063795522750154922739,0.4370245010371041629370429,0.4588814198335521954490891,0.4804640724041720258582757,0.5017595591361444642896063,0.5227551520511754784539479,0.5434383024128103634441936,0.5637966482266180839144308,0.5838180216287630895500389,0.6034904561585486242035732,0.6228021939105849107615396,0.6417416925623075571535249,0.6602976322726460521059468,0.6784589224477192593677557,0.6962147083695143323850866,0.7135543776835874133438599,0.7304675667419088064717369,0.7469441667970619811698824,0.7629743300440947227797691,0.7785484755064119668504941,0.7936572947621932902433329,0.8082917575079136601196422,0.8224431169556438424645942,0.8361029150609068471168753,0.8492629875779689691636001,0.8619154689395484605906323,0.8740527969580317986954180,0.8856677173453972174082924,0.8967532880491581843864474,0.9073028834017568139214859,0.9173101980809605370364836,0.9267692508789478433346245,0.9356743882779163757831268,0.9440202878302201821211114,0.9518019613412643862177963,0.9590147578536999280989185,0.9656543664319652686458290,0.9717168187471365809043384,0.9771984914639073871653744,0.9820961084357185360247656,0.9864067427245862088712355,0.9901278184917343833379303,0.9932571129002129353034372,0.9957927585349811868641612,0.9977332486255140198821574,0.9990774599773758950119878,0.9998248879471319144736081};
@@ -119,26 +121,14 @@ void printVIXcalls(modelPara p, VD tau, double tbar, VD K, double r, int n);
 void printSPXgradient(modelPara p, double S, double r, int n, VD tau, VD K);
 void printVIXgradient(modelPara p, double tbar, double r, int n, VD tau, VD K);
 
+const double St = 100.0;
+const double S0 = 100.0;
+
 int main() {
-    // These are manully calculated according to the SPXtarr and VIXtarr
-    //VD allT = {0.0, 0.08219178, 0.16438356, 0.24657534, 0.32876712, 0.4109589,
-    //            0.49315068, 0.73972603, 0.98630137};
+    //Reduced maturities
     VD allT = {0.0, 0.08219178, 0.16438356};
 
-    // These are uniform random (0, 1.4) generated
-    //VD disStar = {1.46371706e-04, 4.31183274e-04, 7.89958945e-04, 2.91974407e-04,
-    //   8.57045896e-05, 5.48371267e-04, 4.84620007e-04, 3.51856480e-04};
-    VD disStar = {1.46371706e-04, 4.31183274e-04};
-
-    std::vector<intI> disArr;
-
-    //for (int j = 0; j < 8; j++) {
-    for (int j = 0; j < 2; j++) {
-        disArr.push_back({allT[j], allT[j + 1], disStar[j]});
-    }
-
-    modelPara mp = {3.0, 0.1, 0.08, -0.8, 0.25, disArr};
-    double S = 1.0;
+    double S = St/S0;
     double r = 0.02;
     double tbar = 30 / 365.0;
 
@@ -187,132 +177,106 @@ int main() {
         0.08219178, 0.16438356, 0.08219178, 0.16438356, 0.08219178, 0.16438356,
         0.08219178, 0.16438356, 0.08219178, 0.16438356};
 
-    //
-    VD SPXprices = SPXprice(mp, SPXtarr, S, SPXkarr, r, (int)SPXkarr.size());
+    std::ofstream output;
+    output.open("Heston++onSPXonly_num_estar15_100run");
+    output << std::setprecision(16) << std::scientific;
+    output << "Ik,Ivbar,Iv0,Irho,Isigma,II1,II2,Ok,Rk,Ovbar,Rvbar,Ov0,Rv0,Orho,Rrho,Osigma,Rsigma,OI1,RI1,OI2,RI2,stopped_by,time,iteration,pv,jac,lin_sys,e0,e*,Je,Dp,count,count2,count7"<< std::endl;
 
-    std::vector<intI> toCali;
+    std::default_random_engine generator(1);
+    std::uniform_real_distribution<double> distri(0.0, 1.0);
 
-    for (int j = 0; j < 8; j++) {
-        toCali.push_back({allT[j], allT[j + 1], 0.0});
+    for(int nTest = 0; nTest < 100; nTest++){
+        double k = distri(generator) * 4.5 + 0.5;
+        double vbar = distri(generator) * 0.9 + 0.05;
+        double v0 = distri(generator) * 0.9 + 0.05;
+        double rho = distri(generator) * (-0.8) - 0.1;
+        double sigma = distri(generator) * 0.9 + 0.05;
+        double I1 = distri(generator) * 1e-03;
+        double I2 = distri(generator) * 1e-03;
+        VD disStar = {I1, I2};
+
+        std::vector<intI> disArr;
+        for (int j = 0; j < 2; j++) {
+            disArr.push_back({allT[j], allT[j + 1], disStar[j]});
+        }
+
+        modelPara mp = {k, vbar, v0, rho, sigma, disArr};
+        VD SPXprices = SPXprice(mp, SPXtarr, S, SPXkarr, r, (int)SPXkarr.size());
+
+        std::vector<intI> toCali;
+        for (int j = 0; j < 2; j++) {
+            toCali.push_back({allT[j], allT[j + 1], 0.0});
+        }
+        mktPara marP = {S, r, SPXtarr, SPXkarr, VIXtarr, VIXkarr, SPXprices,
+        tbar, toCali};
+        double p[7];
+        double opts[LM_OPTS_SZ], info[LM_INFO_SZ];
+        opts[0] = LM_INIT_MU;
+        // stopping thresholds for
+        opts[1] = 1E-10;          // ||J^T e||_inf
+        opts[2] = 1E-300;          // ||Dp||_2
+        opts[3] = 1E-15;          // ||e||_2
+        opts[4] = -LM_DIFF_DELTA;  // finite difference if used
+
+        int count = 0;
+        int countSmallDp = 0;
+        int count7 = 0;
+        double II1, II2, Ik, Ivbar, Iv0, Irho, Isigma;
+        double start_s, stop_s;
+        double err[40] = {-1};
+        do{
+            p[0] = distri(generator) * 4.5 + 0.5;
+            p[1] = distri(generator) * 0.9 + 0.05;
+            p[2] = distri(generator) * 0.9 + 0.05;
+            p[3] = distri(generator) * (-0.8) - 0.1;
+            p[4] = distri(generator) * 0.9 + 0.05;
+            p[5] = distri(generator) * 1e-03;
+            p[6] = distri(generator) * 1e-03;
+
+            Ik = p[0];
+            Ivbar = p[1];
+            Iv0 = p[2];
+            Irho = p[3];
+            Isigma = p[4];
+            II1 = p[5];
+            II2 = p[6];
+
+            //dlevmar_chkjac(objFunc, JacFunc, p, 7, 40, (void *)&marP, err);
+            //for (int cer = 0; cer < 40; cer++){
+            //    std::cerr << err[cer] << ",";
+            //}
+            //std::cerr << std::endl;
+
+            start_s = clock();
+            //dlevmar_der(objFunc, JacFunc, p, NULL, 7, 40, 500,
+            //opts, info, NULL, NULL, (void *) &marP);
+            dlevmar_dif(objFunc, p, NULL, 7, 40, 500,
+            opts, info, NULL, NULL, (void *) &marP);
+            stop_s = clock();
+            count++;
+            if ((int(info[6]) == 2)){
+                countSmallDp++;
+            }
+            if ((int(info[6]) == 7)){
+                count7++;
+            }
+
+        }while((int(info[6]) == 2 || int(info[6]) == 7) && count < 100);
+
+
+        output << Ik << "," << Ivbar << "," << Iv0 << "," << Irho << ","
+               << Isigma << "," << II1 << "," << II2 << ",";
+        output << p[0] << "," << k << "," << p[1] << "," << vbar << ","
+               << p[2] << "," << v0 << "," << p[3] << "," << rho << ","
+               << p[4] << "," << sigma << "," << p[5] << "," << I1 << ","
+               << p[6] << "," << I2 << ",";
+        output << int(info[6]) << ",";
+        output << double(stop_s - start_s) / CLOCKS_PER_SEC << ",";
+        output << int(info[5]) << "," << int(info[7]) << "," << int(info[8]) << ","
+               << int(info[9]) << ",";
+        output << info[0] << "," << info[1] << "," << info[2] << "," << info[3] << ","
+               << count << "," << countSmallDp << "," << count7 << std::endl;
     }
-    mktPara marP = {S, r, SPXtarr, SPXkarr, VIXtarr, VIXkarr, SPXprices,
-    tbar, toCali};
-
-
-    //VD disInitial = {5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0};
-    VD disInitial = {5.0, 5.0};
-    double p[7];
-    // Initial 1
-    p[0] = 1.2000;
-    p[1] = 0.20000;
-    p[2] = 0.2000;
-    p[3] = -0.6000;
-    p[4] = 0.3000;
-
-    // Initial 2
-    //p[0] = 1.2000;
-    //p[1] = 0.30000;
-    //p[2] = 0.2500;
-    //p[3] = -0.4000;
-    //p[4] = 0.2000;
-
-    // Initial 3
-    //p[0] = 1.4000;
-    //p[1] = 0.40000;
-    //p[2] = 0.4000;
-    //p[3] = -0.7000;
-    //p[4] = 0.2000;
-    for(int fill = 0; fill < 2; fill++){
-        p[fill+5] = disInitial[fill] * 0.0001;
-    }
-
-    double opts[LM_OPTS_SZ], info[LM_INFO_SZ];
-    opts[0] = LM_INIT_MU;
-    // stopping thresholds for
-    opts[1] = 1E-10;          // ||J^T e||_inf
-    opts[2] = 1E-300;          // ||Dp||_2
-    opts[3] = 1E-10;          // ||e||_2
-    opts[4] = -LM_DIFF_DELTA;  // finite difference if used
-
-    std::cout <<
-    "\r-------- -------- -------- Heston Model Calibrator-------- -------- --------"
-    <<std::endl;
-    
-    std::cout <<
-    "Parameters:" << "\t      kappa"<<"\t     vinf"<< "\t       v0"<<"\t      rho"
-    <<"\t       vov"<<"\t       I1"<< "\t       I2"<< "\t       I3"<< "\t       I4"
-    <<"\t       I5"<<"\t       I6"<<"\t       I7"<<"\t       I8"
-    <<std::endl;
-
-    std::cout << "\r Initial point:" << "\t"  << std::scientific
-    << std::setprecision(8) << p[0]<< "\t" << p[1]<< "\t"<< p[2]<< "\t"<< p[3]
-    << "\t"<< p[4] << "\t" << p[5]<< "\t" << p[6]
-    << std::endl;
-
-    double start_s = clock();
-    //double err[40] = {-1};
-    //dlevmar_chkjac(objFunc, JacFunc, p, 13, 40, (void *)&marP, err);
-    //for (int cer = 0; cer < 40; cer++){
-    //    std::cerr << err[cer] << ",";
-    //}
-    //std::cerr << std::endl;
-
-    //dlevmar_der(objFunc, JacFunc, p, NULL, 7, 40, 30000,
-    //opts, info, NULL, NULL, (void *) &marP);
-    dlevmar_dif(objFunc, p, NULL, 7, 40, 30000,
-    opts, info, NULL, NULL, (void *) &marP);
-    double stop_s = clock();
-
-    std::cout << "Optimum found:" << std::scientific << std::setprecision(8)
-    << "\t"<< p[0]<< "\t" << p[1]<< "\t"<< p[2]<< "\t"<< p[3]<< "\t"<< p[4]
-    << "\t" << p[5]<< "\t" << p[6]
-    << std::endl;
-
-    std::cout << "Real optimum:" << "\t" << mp.k<<"\t"<< mp.vbar
-    << "\t"<< mp.v0<< "\t"<< mp.rho<< "\t"<< mp.sigma << "\t" << disStar[0]
-    << "\t"<< disStar[1]
-    << std::endl;
-
-
-    if (int(info[6]) == 6) {
-        std::cout << "\r Solved: stopped by small ||e||_2 = " << info[1] << " < "
-             << opts[3] << std::endl;
-    } else if (int(info[6]) == 1) {
-        std::cout << "\r Solved: stopped by small gradient J^T e = " << info[2]
-             << " < " << opts[1] << std::endl;
-    } else if (int(info[6]) == 2) {
-        std::cout << "\r Solved: stopped by small change Dp = " << info[3] << " < "
-             << opts[2] << std::endl;
-    } else if (int(info[6]) == 3) {
-        std::cout << "\r Unsolved: stopped by itmax " << std::endl;
-    } else if (int(info[6]) == 4) {
-        std::cout << "\r Unsolved: singular matrix. Restart from current p with "
-                "increased mu"
-             << std::endl;
-    } else if (int(info[6]) == 5) {
-        std::cout << "\r Unsolved: no further error reduction is possible. Restart "
-                "with increased mu"
-             << std::endl;
-    } else if (int(info[6]) == 7) {
-        std::cout << "\r Unsolved: stopped by invalid values, user error" << std::endl;
-    }
-
-    std::cout << "\r-------- -------- -------- Computational cost -------- -------- "
-            "--------"
-         << std::endl;
-    std::cout << "\r          Time cost: "
-         << double(stop_s - start_s) / CLOCKS_PER_SEC << " seconds " << std::endl;
-    std::cout << "         Iterations: " << int(info[5]) << std::endl;
-    std::cout << "         pv  Evalue: " << int(info[7]) << std::endl;
-    std::cout << "         Jac Evalue: " << int(info[8]) << std::endl;
-    std::cout << "# of lin sys solved: " << int(info[9])
-         << std::endl;  // The attempts to reduce error
-    std::cout << "\r-------- -------- -------- Residuals -------- -------- --------"
-         << std::endl;
-    std::cout << " \r            ||e0||_2: " << info[0] << std::endl;
-    std::cout << "           ||e*||_2: " << info[1] << std::endl;
-    std::cout << "          ||J'e||_inf: " << info[2] << std::endl;
-    std::cout << "           ||Dp||_2: " << info[3] << std::endl;
 
     //showSPXcallPrices(mp, SPXtarr, S, SPXkarr, r, (int)SPXkarr.size());
     //printSPXgradient(mp, S, r, (int)SPXkarr.size(), SPXtarr, SPXkarr);
